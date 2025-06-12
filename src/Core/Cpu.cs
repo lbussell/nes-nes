@@ -10,6 +10,8 @@ public class Cpu
         _registers = new Registers();
     }
 
+    public Registers Registers => _registers;
+
     public void Run(byte[] program)
     {
         // Load the program into memory
@@ -17,11 +19,15 @@ public class Cpu
 
         while (true)
         {
-            ExecuteInstruction();
+            var result = ExecuteInstruction();
+            if (result == InstructionResult.StopExecution)
+            {
+                break;
+            }
         }
     }
 
-    private void ExecuteInstruction()
+    private InstructionResult ExecuteInstruction()
     {
         // Load next instruction
         byte opcode = _program[_registers.PC];
@@ -30,7 +36,21 @@ public class Cpu
         // Execute instruction
         switch (opcode)
         {
-            case 0xA9: // LDA
+            case 0x00:
+                // BRK
+                // For now, just stop execution.
+                // TODO: implement proper BRK handling
+                return InstructionResult.StopExecution;
+
+            case 0xA9:
+                // LDA immediate
+                // Loads a byte of memory into the accumulator. Sets the zero
+                // and negative flags as appropriate.
+                byte nextByte = _program[_registers.PC++];
+                _registers.A = nextByte;
+                _registers.SetZero(_registers.A);
+                _registers.SetNegative(_registers.A);
+                break;
 
             // other instructions go here...
 
@@ -39,5 +59,13 @@ public class Cpu
                 throw new NotImplementedException(
                     $"Opcode {opcode:X2} is not implemented.");
         }
+
+        return InstructionResult.Ok;
+    }
+
+    private enum InstructionResult
+    {
+        StopExecution,
+        Ok,
     }
 }

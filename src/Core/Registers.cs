@@ -41,5 +41,45 @@ public struct Registers
     /// Processor status - represents 7 status flags that can be set or unset
     /// depending on the result of the last executed instruction.
     /// </summary>
-    public byte P;
+    /// <remarks>
+    /// Also see <see cref="Flags"/>.
+    /// </remarks>
+    public Flags P;
+
+    /// <summary>
+    /// Sets the zero flag if the given value is zero, otherwise clears it.
+    /// </summary>
+    /// <param name="value">
+    /// The zero flag will be set or unset based on this value.
+    /// </param>
+    public void SetZero(byte value)
+    {
+        if (value == 0)
+        {
+            P |= Flags.Zero; // Set the zero flag
+        }
+        else
+        {
+            P &= ~Flags.Zero; // Clear the zero flag
+        }
+    }
+
+    /// <summary>
+    /// Sets the negative flag if the most significant bit of the given
+    /// value is set, otherwise clears it.
+    /// </summary>
+    /// <param name="value">
+    /// The negative flag will be set or unset based this value.
+    /// </param>
+    public void SetNegative(byte value)
+    {
+        if ((sbyte)value < 0)
+        {
+            P |= Flags.Negative; // Set the negative flag
+        }
+        else
+        {
+            P &= ~Flags.Negative; // Clear the negative flag
+        }
+    }
 }
