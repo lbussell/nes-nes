@@ -5,15 +5,24 @@ public class Cpu
     private Registers _registers;
     private byte[] _program = [];
 
-    public Cpu()
+    public Cpu(Registers registers = new())
     {
-        _registers = new Registers();
+        _registers = registers;
     }
 
     public Registers Registers => _registers;
 
+    /// <summary>
+    /// Run a simple program starting at address 0x0000. Does not do any of the
+    /// typical 6502 initialization steps. This is mostly for testing.
+    /// </summary>
+    /// <param name="program">
+    /// The program to execute.
+    /// </param>
     public void Run(byte[] program)
     {
+        _registers.PC = 0;
+
         // Load the program into memory
         _program = program;
 

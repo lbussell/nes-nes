@@ -4,23 +4,43 @@ using NesNes.Core;
 
 public class Arithmetic
 {
-    [Theory]
-    [InlineData(0x00)]
-    [InlineData(0xFF)]
-    [InlineData(0xC0)]
-    public void Inx(byte value)
+    [Fact]
+    public void Inx()
     {
+        var initialRegisters = new Registers()
+        {
+            X = 0xCC,
+        };
+
         byte[] program =
         [
-            0xA9,   // LDA immediate
-            value,  // Load value into the accumulator
-            0x00    // BRK (break)
+            0xE8,   // INX - X += 1
+            0x00    // stop
         ];
 
-        var cpu = new Cpu();
+        var cpu = new Cpu(registers: initialRegisters);
         cpu.Run(program);
+        cpu.Registers.X.ShouldBe(0xCD);
+    }
 
-        cpu.Registers.A.ShouldBe(value);
-        FlagsHelper.ValidateZeroAndNegative(cpu.Registers.P, value);
+    [Fact]
+    public void InxOverflow()
+    {
+        var initialRegisters = new Registers()
+        {
+            X = 0xFF,
+        };
+
+        byte[] program =
+        [
+            // Intentionally overflow the X register
+            0xE8,   // INX - X += 1
+            0xE8,   // INX - X += 1
+            0x00    // stop
+        ];
+
+        var cpu = new Cpu(registers: initialRegisters);
+        cpu.Run(program);
+        cpu.Registers.X.ShouldBe(0x01);
     }
 }
