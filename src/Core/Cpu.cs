@@ -59,6 +59,14 @@ public class Cpu
                 _registers.SetZeroAndNegative(_registers.A);
                 break;
 
+            case 0xE8:
+                // INX - increment X
+                // X,Z,N = X+1
+                // Cycles: 2
+                _registers.X += 1;
+                _registers.SetZeroAndNegative(_registers.X);
+                break;
+
             default:
                 // Handle unknown opcode
                 throw new NotImplementedException(

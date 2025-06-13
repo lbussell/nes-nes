@@ -1,7 +1,6 @@
 namespace NesNes.Tests;
 
 using NesNes.Core;
-using Shouldly.ShouldlyExtensionMethods;
 
 public class Load
 {
@@ -22,23 +21,6 @@ public class Load
         cpu.Run(program);
 
         cpu.Registers.A.ShouldBe(value);
-
-        if (value == 0)
-        {
-            cpu.Registers.P.ShouldHaveFlag(Flags.Zero);
-        }
-        else
-        {
-            cpu.Registers.P.ShouldNotHaveFlag(Flags.Zero);
-        }
-
-        if ((sbyte)value < 0)
-        {
-            cpu.Registers.P.ShouldHaveFlag(Flags.Negative);
-        }
-        else
-        {
-            cpu.Registers.P.ShouldNotHaveFlag(Flags.Negative);
-        }
+        FlagsHelper.ValidateZeroAndNegative(cpu.Registers.P, value);
     }
 }
