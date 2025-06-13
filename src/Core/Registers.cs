@@ -18,7 +18,7 @@ public struct Registers
     /// decremented. Likewise, when a byte is retrieved from the stack, this
     /// register is incremented.
     /// </summary>
-    public ushort SP;
+    public byte SP;
 
     /// <summary>
     /// Accumulator - stores the results of arithmetic, logic, and memory
