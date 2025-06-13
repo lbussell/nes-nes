@@ -42,17 +42,22 @@ public class Cpu
                 // TODO: implement proper BRK handling
                 return InstructionResult.StopExecution;
 
+            case 0xAA:
+                // TAX
+                // Transfer the value in the accumulator to the X register.
+                // Machine cycles: 2
+                _registers.X = _registers.A;
+                _registers.SetZeroAndNegative(_registers.X);
+                break;
+
             case 0xA9:
                 // LDA immediate
-                // Loads a byte of memory into the accumulator. Sets the zero
+                // Load a byte of memory into the accumulator. Sets the zero
                 // and negative flags as appropriate.
                 byte nextByte = _program[_registers.PC++];
                 _registers.A = nextByte;
-                _registers.SetZero(_registers.A);
-                _registers.SetNegative(_registers.A);
+                _registers.SetZeroAndNegative(_registers.A);
                 break;
-
-            // other instructions go here...
 
             default:
                 // Handle unknown opcode

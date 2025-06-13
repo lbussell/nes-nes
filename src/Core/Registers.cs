@@ -47,6 +47,18 @@ public struct Registers
     public Flags P;
 
     /// <summary>
+    /// Sets the zero and negative flags based on the given value.
+    /// </summary>
+    /// <param name="value">
+    /// The zero and negative flags will be set according to this value.
+    /// </param>
+    public void SetZeroAndNegative(byte value)
+    {
+        SetZero(value);
+        SetNegative(value);
+    }
+
+    /// <summary>
     /// Sets the zero flag if the given value is zero, otherwise clears it.
     /// </summary>
     /// <param name="value">

@@ -1,6 +1,6 @@
-using Shouldly;
-
 namespace NesNes.Tests;
+
+using Shouldly;
 
 public static class ShouldlyExtensions
 {
