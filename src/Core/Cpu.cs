@@ -31,6 +31,14 @@ public class Cpu
         }
     }
 
+    public void RunSteps(int steps)
+    {
+        for (var i = 0; i < steps; i++)
+        {
+            _ = Step();
+        }
+    }
+
     private InstructionResult Step()
     {
         // Load next instruction
