@@ -20,4 +20,6 @@ public readonly record struct Instruction(
         var extraCycles = Handler(AddressingMode);
         return Cycles + extraCycles;
     }
+
+    public bool HasValue() => Handler is not null;
 };

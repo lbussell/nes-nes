@@ -35,7 +35,6 @@ public class Cpu
     {
         // Load next instruction
         byte opcode = Fetch8();
-
         if (opcode == 0x00)
         {
             // BRK (break) instruction, stop execution
@@ -43,6 +42,12 @@ public class Cpu
         }
 
         var instruction = _instructions[opcode];
+        if (!instruction.HasValue())
+        {
+            throw new InvalidOperationException(
+                $"Unknown opcode: {opcode:X2} at PC: {_registers.PC - 1:X4}");
+        }
+
         var cycles = instruction.Execute();
         return InstructionResult.Ok;
     }
@@ -102,7 +107,7 @@ public class Cpu
     /// <summary>
     /// Wrapper for instructions that do not require an operand.
     /// </summary>
-    private InstructionHandler Implicit(Action action) => _ =>
+    private static InstructionHandler Implicit(Action action) => _ =>
     {
         action();
         return 0;
