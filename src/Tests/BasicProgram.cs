@@ -16,8 +16,8 @@ public class BasicProgram
             0x00  // BRK        // stop
         ];
 
-        var cpu = new Cpu();
-        cpu.Run(program);
+        var cpu = new Cpu(new Registers(), new SimpleMemory(program));
+        cpu.Run();
 
         cpu.Registers.A.ShouldBe(0xC0);
         cpu.Registers.X.ShouldBe(0xC1);

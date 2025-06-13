@@ -17,8 +17,9 @@ public class Load
             0x00    // BRK (break)
         ];
 
-        var cpu = new Cpu();
-        cpu.Run(program);
+        var memory = new SimpleMemory(program);
+        var cpu = new Cpu(new Registers(), memory);
+        cpu.Run();
 
         cpu.Registers.A.ShouldBe(value);
         FlagsHelper.ValidateZeroAndNegative(cpu.Registers.P, value);

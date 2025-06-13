@@ -18,8 +18,8 @@ public class Arithmetic
             0x00    // stop
         ];
 
-        var cpu = new Cpu(registers: initialRegisters);
-        cpu.Run(program);
+        var cpu = new Cpu(initialRegisters, new SimpleMemory(program));
+        cpu.Run();
         cpu.Registers.X.ShouldBe(0xCD);
     }
 
@@ -39,8 +39,8 @@ public class Arithmetic
             0x00    // stop
         ];
 
-        var cpu = new Cpu(registers: initialRegisters);
-        cpu.Run(program);
+        var cpu = new Cpu(initialRegisters, new SimpleMemory(program));
+        cpu.Run();
         cpu.Registers.X.ShouldBe(0x01);
     }
 }
