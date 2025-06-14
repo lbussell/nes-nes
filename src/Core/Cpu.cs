@@ -85,6 +85,13 @@ public class Cpu
         opcodes[0xAE] = new("LDX", ldx, AddressingMode.Absolute, 4);
         opcodes[0xBE] = new("LDX", ldx, AddressingMode.AbsoluteY, 4);
 
+        var ldy = UseOperand(Ldy);
+        opcodes[0xA0] = new("LDY", ldy, AddressingMode.Immediate, 2);
+        opcodes[0xA4] = new("LDY", ldy, AddressingMode.ZeroPage, 3);
+        opcodes[0xB4] = new("LDY", ldy, AddressingMode.ZeroPageX, 4);
+        opcodes[0xAC] = new("LDY", ldy, AddressingMode.Absolute, 4);
+        opcodes[0xBC] = new("LDY", ldy, AddressingMode.AbsoluteX, 4);
+
         return opcodes;
     }
 
@@ -106,6 +113,16 @@ public class Cpu
     {
         _registers.X = operand;
         _registers.SetZeroAndNegative(_registers.X);
+    }
+
+    /// <summary>
+    /// Load the operand into the Y register, setting the zero and negative
+    /// flags as appropriate.
+    /// </summary>
+    private void Ldy(byte operand)
+    {
+        _registers.Y = operand;
+        _registers.SetZeroAndNegative(_registers.Y);
     }
 
     private void Tax()
