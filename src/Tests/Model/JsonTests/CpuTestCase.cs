@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace NesNes.Tests.TestData.Model;
+namespace NesNes.Tests.Model.JsonTests;
 
 /// <summary>
 /// Represents a single processor test case from the JSON test data.

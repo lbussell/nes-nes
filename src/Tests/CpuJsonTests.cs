@@ -1,5 +1,5 @@
 using NesNes.Core;
-using NesNes.Tests.TestData.Model;
+using NesNes.Tests.Model.JsonTests;
 using Shouldly;
 
 namespace NesNes.Tests;

@@ -1,6 +1,6 @@
 using NesNes.Core;
 
-namespace NesNes.Tests.TestData.Model;
+namespace NesNes.Tests.Model.JsonTests;
 
 /// <summary>
 /// Represents the state of the processor (registers and memory).
