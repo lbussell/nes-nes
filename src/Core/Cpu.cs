@@ -66,6 +66,16 @@ public class Cpu
     {
         var opcodes = new Instruction[0x100];
 
+        var adc = UseOperand(Adc);
+        opcodes[0x69] = new("ADC", adc, AddressingMode.Immediate, 2);
+        opcodes[0x65] = new("ADC", adc, AddressingMode.ZeroPage, 3);
+        opcodes[0x75] = new("ADC", adc, AddressingMode.ZeroPageX, 4);
+        opcodes[0x6D] = new("ADC", adc, AddressingMode.Absolute, 4);
+        opcodes[0x7D] = new("ADC", adc, AddressingMode.AbsoluteX, 4);
+        opcodes[0x79] = new("ADC", adc, AddressingMode.AbsoluteY, 4);
+        opcodes[0x61] = new("ADC", adc, AddressingMode.IndirectX, 6);
+        opcodes[0x71] = new("ADC", adc, AddressingMode.IndirectY, 5);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => {}), AddressingMode.Implicit, 2);
@@ -95,6 +105,28 @@ public class Cpu
         opcodes[0xBC] = new("LDY", ldy, AddressingMode.AbsoluteX, 4);
 
         return opcodes;
+    }
+
+    /// <summary>
+    /// <c>A,Z,C,N = A+M+C;</c>
+    /// Add the operand plus the carry flag to the accumulator.
+    /// </summary>
+    /// <param name="operand"></param>
+    private void Adc(byte operand)
+    {
+        int sum = _registers.A + operand + _registers.Carry;
+
+        _registers.SetZeroAndNegative((byte)sum);
+        _registers.SetCarry((ushort)sum);
+
+        // Set the overflow flag if the sign of the result is different from
+        // the sign of both the accumulator and the operand.
+        // XOR'ing the oprerands and the sum will set the high bit if the signs
+        // of the sums differ. Then, we can just check the high bit (0x80).
+        // If the high bit is set, then the operation overflowed.
+        _registers.SetOverflow(((_registers.A ^ sum) & (operand ^ sum) & 0x80) != 0);
+
+        _registers.A = (byte)(sum & 0xFF); // Store only the lower 8 bits
     }
 
     /// <summary>

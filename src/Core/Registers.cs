@@ -47,6 +47,34 @@ public record struct Registers
     public Flags P;
 
     /// <summary>
+    /// Gets the value of the carry flag. This can be used directly in
+    /// arithmetic operations.
+    /// </summary>
+    public readonly byte Carry => P.HasFlag(Flags.Carry) ? (byte)1 : (byte)0;
+
+    /// <summary>
+    /// Sets the carry flag based on the given value. Given the result of an
+    /// operation, sets the carry flag based on whether or not the result
+    /// overflowed the max value for a byte. Otherwise, the carry flag is
+    /// cleared
+    /// </summary>
+    /// <param name="value">
+    /// The result of an operation. If the operation overflowed a single byte,
+    /// then the carry flag will be set.
+    /// </param>
+    public void SetCarry(ushort value)
+    {
+        if (value > 0xFF)
+        {
+            P |= Flags.Carry;
+        }
+        else
+        {
+            P &= ~Flags.Carry;
+        }
+    }
+
+    /// <summary>
     /// Sets the zero and negative flags based on the given value.
     /// </summary>
     /// <param name="value">
@@ -92,6 +120,21 @@ public record struct Registers
         else
         {
             P &= ~Flags.Negative; // Clear the negative flag
+        }
+    }
+
+    /// <summary>
+    /// Simply set or clears the overflow flag based on the given boolean.
+    /// </summary>
+    public void SetOverflow(bool value)
+    {
+        if (value)
+        {
+            P |= Flags.Overflow;
+        }
+        else
+        {
+            P &= ~Flags.Overflow;
         }
     }
 }
