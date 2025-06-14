@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents all of the registers in the NES CPU.
 /// </summary>
-public struct Registers
+public record struct Registers
 {
     /// <summary>
     /// Program counter - holds the holds the address of the next instruction

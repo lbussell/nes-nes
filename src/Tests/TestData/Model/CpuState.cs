@@ -1,0 +1,29 @@
+using NesNes.Core;
+
+namespace NesNes.Tests.TestData.Model;
+
+/// <summary>
+/// Represents the state of the processor (registers and memory).
+/// </summary>
+public record CpuState(
+    ushort PC,
+    byte S,
+    byte A,
+    byte X,
+    byte Y,
+    byte P,
+    int[][] Ram)
+{
+    public Registers GetRegisters()
+    {
+        return new Registers
+        {
+            PC = PC,
+            SP = S,
+            A = A,
+            X = X,
+            Y = Y,
+            P = (Flags)P
+        };
+    }
+}
