@@ -60,7 +60,11 @@ public record struct Registers
 
     public override readonly string ToString()
     {
-        return $"{PC:X} A:{A:X} X:{X:X} Y:{Y:X} P:{(byte)P:X} SP:{SP:X}";
+        return
+            $"""
+            PC   A  X  Y  NV1BDIZC SP
+            {PC:X4} {A:X2} {X:X2} {Y:X2} {(byte)P:B8} {SP:X2}
+            """;
     }
 
     /// <summary>
@@ -73,7 +77,7 @@ public record struct Registers
     /// The result of an operation. If the operation overflowed a single byte,
     /// then the carry flag will be set.
     /// </param>
-    public void SetCarry(ushort value)
+    public void SetCarry(int value)
     {
         if (value > 0xFF)
         {
