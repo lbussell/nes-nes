@@ -93,6 +93,16 @@ public class Cpu
         opcodes[0x61] = new("ADC", adc, AddressingMode.IndirectX, 6);
         opcodes[0x71] = new("ADC", adc, AddressingMode.IndirectY, 5);
 
+        var and = UseOperand(And);
+        opcodes[0x29] = new("AND", and, AddressingMode.Immediate, 2);
+        opcodes[0x25] = new("AND", and, AddressingMode.ZeroPage, 3);
+        opcodes[0x35] = new("AND", and, AddressingMode.ZeroPageX, 4);
+        opcodes[0x2D] = new("AND", and, AddressingMode.Absolute, 4);
+        opcodes[0x3D] = new("AND", and, AddressingMode.AbsoluteX, 4);
+        opcodes[0x39] = new("AND", and, AddressingMode.AbsoluteY, 4);
+        opcodes[0x21] = new("AND", and, AddressingMode.IndirectX, 6);
+        opcodes[0x31] = new("AND", and, AddressingMode.IndirectY, 5);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -154,6 +164,16 @@ public class Cpu
         _registers.SetOverflow(((_registers.A ^ sum) & (operand ^ sum) & 0x80) != 0);
 
         _registers.A = (byte)(sum & 0xFF); // Store only the lower 8 bits
+    }
+
+    /// <summary>
+    /// Logical AND between the accumulator and operand.
+    /// </summary>
+    /// <param name="operand"></param>
+    private void And(byte operand)
+    {
+        _registers.A &= operand;
+        _registers.SetZeroAndNegative(_registers.A);
     }
 
     /// <summary>
