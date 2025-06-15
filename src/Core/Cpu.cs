@@ -31,12 +31,27 @@ public class Cpu
         }
     }
 
-    public void RunSteps(int steps)
+    internal void RunSteps(int steps)
     {
-        for (var i = 0; i < steps; i++)
+        for (var i = 0; i < steps; i += 1)
         {
             _ = Step();
         }
+    }
+
+    internal List<byte> GetImplementedOpcodes()
+    {
+        var implementedOpcodes = new List<byte>();
+
+        for (byte i = 0; i < _instructions.Length; i += 1)
+        {
+            if (_instructions[i].HasValue())
+            {
+                implementedOpcodes.Add(i);
+            }
+        }
+
+        return implementedOpcodes;
     }
 
     private InstructionResult Step()
