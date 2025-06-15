@@ -213,13 +213,22 @@ public class Cpu
     /// Branch if the carry flag is clear. 1 extra cycle if the branch is taken,
     /// and an additional cycle if a page boundary is crossed.
     /// </summary>
-    private int Bcc(AddressingMode mode)
+    private int Bcc(AddressingMode mode) =>
+        BranchIf(() => !_registers.P.HasFlag(Flags.Carry), mode);
+
+    /// <summary>
+    /// Branch if the given predicate is true. Takes one extra cycle if the
+    /// branch is taken, and 1 additional cycle on top of that if a page
+    /// boundary is crossed.
+    /// </summary>
+    /// <returns>Additional CPU cycles taken.</returns>
+    private int BranchIf(Func<bool> predicate, AddressingMode mode)
     {
         // Always fetch the address, since we need to advance the program counter.
         var addressResult = GetAddress(mode);
 
         // If the carry flag is clear, branch to the target address.
-        if (!_registers.P.HasFlag(Flags.Carry))
+        if (predicate())
         {
             // If the branch crosses a page boundary, add an extra cycle.
             var extraCycles = 1 + CalculatePageCrossPenalty(_registers.PC, addressResult.Address);
@@ -227,7 +236,7 @@ public class Cpu
             return extraCycles;
         }
 
-        // No branch taken, just return 0 cycles.
+        // Since the branch was not taken, we incurred 0 extra cycles.
         return 0;
     }
 
