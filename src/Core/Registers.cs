@@ -1,8 +1,11 @@
-﻿namespace NesNes.Core;
+﻿using System.Diagnostics;
+
+namespace NesNes.Core;
 
 /// <summary>
 /// Represents all of the registers in the NES CPU.
 /// </summary>
+[DebuggerDisplay("{ToString(),nq}")]
 public record struct Registers
 {
     /// <summary>
@@ -51,6 +54,11 @@ public record struct Registers
     /// arithmetic operations.
     /// </summary>
     public readonly byte Carry => P.HasFlag(Flags.Carry) ? (byte)1 : (byte)0;
+
+    public override readonly string ToString()
+    {
+        return $"{PC:X} A:{A:X} X:{X:X} Y:{Y:X} P:{(byte)P:X} SP:{SP:X}";
+    }
 
     /// <summary>
     /// Sets the carry flag based on the given value. Given the result of an

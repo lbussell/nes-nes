@@ -63,7 +63,15 @@ public class CpuJsonTests
         var initialRegisters = testCase.Initial.GetRegisters();
         var cpu = new Cpu(initialRegisters, memory);
 
-        cpu.RunSteps(1);
+        try
+        {
+            cpu.RunSteps(1);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException(
+                $"Test case '{testCase.Name}' failed: {e.Message}", e);
+        }
 
         cpu.Registers.ShouldBe(testCase.Final.GetRegisters(),
             $"Test case '{testCase.Name}' failed: Registers do not match.");
