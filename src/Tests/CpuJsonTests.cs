@@ -103,6 +103,7 @@ public class CpuJsonTests
             testCase.Final.GetRegisters(),
             $"Test case '{testCase.Name}' failed: Registers do not match."
         );
+
         memory.GetMemorySnapshot().ShouldBe(testCase.Final.Ram);
     }
 }

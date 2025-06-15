@@ -43,6 +43,7 @@ public class TestMemory : IMemory
             .ToArray();
     }
 
+    /// <inheritdoc/>
     public byte Read8(ushort address)
     {
         if (!_memory.TryGetValue(address, out byte value))
@@ -54,6 +55,7 @@ public class TestMemory : IMemory
         return value;
     }
 
+    /// <inheritdoc/>
     public void Write8(ushort address, byte value)
     {
         _memory[address] = value;
