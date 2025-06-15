@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿// SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
+// SPDX-License-Identifier: MIT
+
+using System.Diagnostics;
 
 namespace NesNes.Core;
 

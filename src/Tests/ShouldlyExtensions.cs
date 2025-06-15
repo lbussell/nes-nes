@@ -1,6 +1,9 @@
-namespace NesNes.Tests;
+// SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
+// SPDX-License-Identifier: MIT
 
 using Shouldly;
+
+namespace NesNes.Tests;
 
 public static class ShouldlyExtensions
 {

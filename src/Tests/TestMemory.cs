@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
+// SPDX-License-Identifier: MIT
+
 using NesNes.Core;
 
 namespace NesNes.Tests;

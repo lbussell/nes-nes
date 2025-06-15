@@ -1,4 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+﻿// SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
+// SPDX-License-Identifier: MIT
+
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -18,7 +21,7 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        // TODO: Add your initialization logic here
+        // TODO: Add initialization logic here
 
         base.Initialize();
     }
@@ -27,15 +30,17 @@ public class Game1 : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-        // TODO: use this.Content to load your game content here
+        // TODO: use this.Content to load game content here
     }
 
     protected override void Update(GameTime gameTime)
     {
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+        {
             Exit();
+        }
 
-        // TODO: Add your update logic here
+        // TODO: Add update logic here
 
         base.Update(gameTime);
     }

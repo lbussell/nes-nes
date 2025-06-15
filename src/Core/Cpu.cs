@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
+// SPDX-License-Identifier: MIT
+
 namespace NesNes.Core;
 
 public class Cpu
@@ -93,7 +96,7 @@ public class Cpu
 
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
-        opcodes[0xEA] = new("NOP", Implicit(() => {}), AddressingMode.Implicit, 2);
+        opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
 
         var lda = UseOperand(Lda);
         opcodes[0xA9] = new("LDA", lda, AddressingMode.Immediate, 2);
