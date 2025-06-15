@@ -24,9 +24,7 @@ public class CpuJsonTests
             yield break;
         }
 
-        var jsonFiles = Directory.GetFiles(testDataPath, "*.json")
-            .OrderBy(f => f)
-            .ToArray();
+        var jsonFiles = Directory.GetFiles(testDataPath, "*.json").OrderBy(f => f).ToArray();
 
         foreach (var file in jsonFiles)
         {
@@ -73,11 +71,15 @@ public class CpuJsonTests
         catch (Exception e)
         {
             throw new InvalidOperationException(
-                $"Test case '{testCase.Name}' failed: {e.Message}", e);
+                $"Test case '{testCase.Name}' failed: {e.Message}",
+                e
+            );
         }
 
-        cpu.Registers.ShouldBe(testCase.Final.GetRegisters(),
-            $"Test case '{testCase.Name}' failed: Registers do not match.");
+        cpu.Registers.ShouldBe(
+            testCase.Final.GetRegisters(),
+            $"Test case '{testCase.Name}' failed: Registers do not match."
+        );
         memory.GetMemorySnapshot().ShouldBe(testCase.Final.Ram);
     }
 }

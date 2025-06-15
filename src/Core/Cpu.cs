@@ -9,9 +9,7 @@ public class Cpu
     private readonly IMemory _memory;
     private Registers _registers;
 
-    public Cpu(
-        Registers initialRegisters,
-        IMemory memory)
+    public Cpu(Registers initialRegisters, IMemory memory)
     {
         _registers = initialRegisters;
         _memory = memory;
@@ -71,7 +69,8 @@ public class Cpu
         if (!instruction.HasValue())
         {
             throw new InvalidOperationException(
-                $"Unknown opcode: {opcode:X2} at PC: {_registers.PC - 1:X4}");
+                $"Unknown opcode: {opcode:X2} at PC: {_registers.PC - 1:X4}"
+            );
         }
 
         var cycles = instruction.Execute();
@@ -190,22 +189,24 @@ public class Cpu
     /// Wrapper for simpler instructions that handles reading the operand from
     /// memory and executing the instruction with that operand.
     /// </summary>
-    private InstructionHandler UseOperand(Action<byte> action) => mode =>
-    {
-        var addressResult = GetAddress(mode);
-        var operand = _memory.Read8(addressResult.Address);
-        action(operand);
-        return addressResult.ExtraCycles;
-    };
+    private InstructionHandler UseOperand(Action<byte> action) =>
+        mode =>
+        {
+            var addressResult = GetAddress(mode);
+            var operand = _memory.Read8(addressResult.Address);
+            action(operand);
+            return addressResult.ExtraCycles;
+        };
 
     /// <summary>
     /// Wrapper for instructions that do not require an operand.
     /// </summary>
-    private static InstructionHandler Implicit(Action action) => _ =>
-    {
-        action();
-        return 0;
-    };
+    private static InstructionHandler Implicit(Action action) =>
+        _ =>
+        {
+            action();
+            return 0;
+        };
 
     private AddressResult GetAddress(AddressingMode mode)
     {
@@ -221,12 +222,10 @@ public class Cpu
             AddressingMode.Indirect => Indirect(),
             AddressingMode.IndirectX => IndirectX(),
             AddressingMode.IndirectY => IndirectY(),
-            AddressingMode.Implicit =>
-                throw new InvalidOperationException(
-                    "Implicit addressing mode does not use an operand."),
-            _ =>
-                throw new NotImplementedException(
-                    $"Addressing mode {mode} is not implemented.")
+            AddressingMode.Implicit => throw new InvalidOperationException(
+                "Implicit addressing mode does not use an operand."
+            ),
+            _ => throw new NotImplementedException($"Addressing mode {mode} is not implemented."),
         };
 
         AddressResult Absolute()
@@ -286,9 +285,7 @@ public class Cpu
             return new AddressResult(targetAddress, 0);
         }
 
-        static int CalculatePageCrossPenalty(
-            ushort originalAddress,
-            ushort newAddress)
+        static int CalculatePageCrossPenalty(ushort originalAddress, ushort newAddress)
         {
             if ((originalAddress & 0xFF00) != (newAddress & 0xFF00))
             {
@@ -321,9 +318,7 @@ public class Cpu
         return nextWord;
     }
 
-    private readonly record struct AddressResult(
-        ushort Address,
-        int ExtraCycles);
+    private readonly record struct AddressResult(ushort Address, int ExtraCycles);
 
     private enum InstructionResult
     {

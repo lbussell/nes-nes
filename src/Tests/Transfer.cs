@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
-
 using NesNes.Core;
 
 namespace NesNes.Tests;
@@ -16,10 +15,10 @@ public class Transfer
     {
         byte[] program =
         [
-            0xA9,   // LDA immediate
-            value,  // Load value into the accumulator
-            0xAA,   // TAX (Transfer A to X)
-            0x00    // BRK (break)
+            0xA9, // LDA immediate
+            value, // Load value into the accumulator
+            0xAA, // TAX (Transfer A to X)
+            0x00, // BRK (break)
         ];
 
         var memory = new SimpleMemory(program);

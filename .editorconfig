@@ -152,6 +152,9 @@ csharp_space_between_square_brackets = false
 file_header_template = SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell\nSPDX-License-Identifier: MIT
 dotnet_diagnostic.IDE0073.severity = warning
 
+# CSharpier configuration
+max_line_length = 100
+
 # Xml project files
 [*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,nativeproj,locproj}]
 indent_size = 2

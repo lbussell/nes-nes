@@ -15,9 +15,9 @@ public class Load
     {
         byte[] program =
         [
-            0xA9,   // LDA immediate
-            value,  // Load value into the accumulator
-            0x00    // BRK (break)
+            0xA9, // LDA immediate
+            value, // Load value into the accumulator
+            0x00, // BRK (break)
         ];
 
         var memory = new SimpleMemory(program);

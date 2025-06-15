@@ -9,7 +9,8 @@ public readonly record struct Instruction(
     string Name,
     InstructionHandler Handler,
     AddressingMode AddressingMode,
-    int Cycles)
+    int Cycles
+)
 {
     /// <summary>
     /// Executes the instruction using the provided handler and addressing mode.

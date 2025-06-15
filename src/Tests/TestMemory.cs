@@ -48,7 +48,8 @@ public class TestMemory : IMemory
         if (!_memory.TryGetValue(address, out byte value))
         {
             throw new InvalidOperationException(
-                $"Attempted to read from uninitialized memory address: 0x{address:X4}");
+                $"Attempted to read from uninitialized memory address: 0x{address:X4}"
+            );
         }
         return value;
     }
