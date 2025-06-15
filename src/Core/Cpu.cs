@@ -121,6 +121,16 @@ public class Cpu
         opcodes[0xAC] = new("LDY", ldy, AddressingMode.Absolute, 4);
         opcodes[0xBC] = new("LDY", ldy, AddressingMode.AbsoluteX, 4);
 
+        var sbc = UseOperand(Sbc);
+        opcodes[0xE9] = new("SBC", sbc, AddressingMode.Immediate, 2);
+        opcodes[0xE5] = new("SBC", sbc, AddressingMode.ZeroPage, 3);
+        opcodes[0xF5] = new("SBC", sbc, AddressingMode.ZeroPageX, 4);
+        opcodes[0xED] = new("SBC", sbc, AddressingMode.Absolute, 4);
+        opcodes[0xFD] = new("SBC", sbc, AddressingMode.AbsoluteX, 4);
+        opcodes[0xF9] = new("SBC", sbc, AddressingMode.AbsoluteY, 4);
+        opcodes[0xE1] = new("SBC", sbc, AddressingMode.IndirectX, 6);
+        opcodes[0xF1] = new("SBC", sbc, AddressingMode.IndirectY, 5);
+
         return opcodes;
     }
 
@@ -144,6 +154,16 @@ public class Cpu
         _registers.SetOverflow(((_registers.A ^ sum) & (operand ^ sum) & 0x80) != 0);
 
         _registers.A = (byte)(sum & 0xFF); // Store only the lower 8 bits
+    }
+
+    /// <summary>
+    /// A,Z,C,N = A-M-(1-C)
+    /// </summary>
+    /// <param name="operand"></param>
+    private void Sbc(byte operand)
+    {
+        // Since ADC is correctly implemented, we can use it to implement SBC.
+        Adc((byte)~operand);
     }
 
     /// <summary>
