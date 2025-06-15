@@ -243,15 +243,27 @@ public class Cpu
         AddressResult IndirectX()
         {
             byte zeroPageAddress = Fetch8();
-            ushort targetPointer = (ushort)(zeroPageAddress + _registers.X);
-            ushort targetAddress = _memory.Read16(targetPointer);
+            byte targetPointer = (byte)(zeroPageAddress + _registers.X);
+            ushort targetAddress = Read16ZeroPageWraparound(targetPointer);
             return new AddressResult(targetAddress, 0);
+        }
+
+        // Read a 16-bit word from zero page, wrapping around if necessary.
+        // The zero page is only 256 bytes, so addresses above 0xFF wrap around.
+        // This handles the case where the first byte is at 0xFF and the second
+        // byte is at 0x00.
+        ushort Read16ZeroPageWraparound(byte address)
+        {
+            byte lsb = _memory.Read8(address);
+            byte msb = _memory.Read8((byte)(address + 1));
+
+            return (ushort)((msb << 8) | lsb);
         }
 
         AddressResult IndirectY()
         {
             byte zeroPageAddress = Fetch8();
-            ushort targetPointer = _memory.Read16(zeroPageAddress);
+            ushort targetPointer = Read16ZeroPageWraparound(zeroPageAddress);
             ushort targetAddress = (ushort)(targetPointer + _registers.Y);
             return new AddressResult(targetAddress, 0);
         }
