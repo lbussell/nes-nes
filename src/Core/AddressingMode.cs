@@ -38,6 +38,13 @@ public enum AddressingMode
     ZeroPageY,
 
     /// <summary>
+    /// Used by branch instructions. The byte after the instruction is an 8-bit
+    /// signed offset that is added to the program counter (PC) if the branch
+    /// condition is met.
+    /// </summary>
+    Relative,
+
+    /// <summary>
     /// The next two bytes after the instruction are interpreted as a
     /// 16-bit address in memory (little endian).
     /// </summary>

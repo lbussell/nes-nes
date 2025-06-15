@@ -109,6 +109,8 @@ public class Cpu
         opcodes[0x0E] = new("ASL", AslMemory, AddressingMode.Absolute, 6);
         opcodes[0x1E] = new("ASL", AslMemory, AddressingMode.AbsoluteX, 7);
 
+        opcodes[0x90] = new("BCC", Bcc, AddressingMode.Relative, 2);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -208,6 +210,28 @@ public class Cpu
     }
 
     /// <summary>
+    /// Branch if the carry flag is clear. 1 extra cycle if the branch is taken,
+    /// and an additional cycle if a page boundary is crossed.
+    /// </summary>
+    private int Bcc(AddressingMode mode)
+    {
+        // Always fetch the address, since we need to advance the program counter.
+        var addressResult = GetAddress(mode);
+
+        // If the carry flag is clear, branch to the target address.
+        if (!_registers.P.HasFlag(Flags.Carry))
+        {
+            // If the branch crosses a page boundary, add an extra cycle.
+            var extraCycles = 1 + CalculatePageCrossPenalty(_registers.PC, addressResult.Address);
+            _registers.PC = addressResult.Address;
+            return extraCycles;
+        }
+
+        // No branch taken, just return 0 cycles.
+        return 0;
+    }
+
+    /// <summary>
     /// A,Z,C,N = A-M-(1-C)
     /// </summary>
     private void Sbc(byte operand)
@@ -286,6 +310,7 @@ public class Cpu
             AddressingMode.ZeroPage => new AddressResult(Fetch8(), 0),
             AddressingMode.ZeroPageX => new AddressResult((byte)(Fetch8() + _registers.X), 0),
             AddressingMode.ZeroPageY => new AddressResult((byte)(Fetch8() + _registers.Y), 0),
+            AddressingMode.Relative => Relative(),
             AddressingMode.Absolute => Absolute(),
             AddressingMode.AbsoluteX => AbsoluteX(),
             AddressingMode.AbsoluteY => AbsoluteY(),
@@ -297,6 +322,13 @@ public class Cpu
             ),
             _ => throw new NotImplementedException($"Addressing mode {mode} is not implemented."),
         };
+
+        AddressResult Relative()
+        {
+            byte offset = Fetch8();
+            ushort targetAddress = (ushort)(_registers.PC + (sbyte)offset);
+            return new AddressResult(targetAddress, 0);
+        }
 
         AddressResult Absolute()
         {
@@ -354,16 +386,6 @@ public class Cpu
             ushort targetAddress = (ushort)(targetPointer + _registers.Y);
             return new AddressResult(targetAddress, 0);
         }
-
-        static int CalculatePageCrossPenalty(ushort originalAddress, ushort newAddress)
-        {
-            if ((originalAddress & 0xFF00) != (newAddress & 0xFF00))
-            {
-                return 1;
-            }
-
-            return 0;
-        }
     }
 
     /// <summary>
@@ -386,6 +408,16 @@ public class Cpu
         var nextWord = _memory.Read16(_registers.PC);
         _registers.PC += 2;
         return nextWord;
+    }
+
+    private static int CalculatePageCrossPenalty(ushort originalAddress, ushort newAddress)
+    {
+        if ((originalAddress & 0xFF00) != (newAddress & 0xFF00))
+        {
+            return 1;
+        }
+
+        return 0;
     }
 
     private readonly record struct AddressResult(ushort Address, int ExtraCycles);
