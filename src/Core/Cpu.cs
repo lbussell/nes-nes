@@ -118,8 +118,34 @@ public class Cpu
         opcodes[0x50] = new("BVC", Bvc, AddressingMode.Relative, 2);
         opcodes[0x70] = new("BVS", Bvs, AddressingMode.Relative, 2);
 
-        opcodes[0x24] = new("BIT", UseOperand(Bit), AddressingMode.ZeroPage, 3);
-        opcodes[0x2C] = new("BIT", UseOperand(Bit), AddressingMode.Absolute, 4);
+        var bit = UseOperand(Bit);
+        opcodes[0x24] = new("BIT", bit, AddressingMode.ZeroPage, 3);
+        opcodes[0x2C] = new("BIT", bit, AddressingMode.Absolute, 4);
+
+        opcodes[0x18] = new(
+            "CLC",
+            Implicit(() => _registers.ClearFlag(Flags.Carry)),
+            AddressingMode.Implicit,
+            2
+        );
+        opcodes[0xD8] = new(
+            "CLD",
+            Implicit(() => _registers.ClearFlag(Flags.DecimalMode)),
+            AddressingMode.Implicit,
+            2
+        );
+        opcodes[0x58] = new(
+            "CLI",
+            Implicit(() => _registers.ClearFlag(Flags.InterruptDisable)),
+            AddressingMode.Implicit,
+            2
+        );
+        opcodes[0xB8] = new(
+            "CLV",
+            Implicit(() => _registers.ClearFlag(Flags.Overflow)),
+            AddressingMode.Implicit,
+            2
+        );
 
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 

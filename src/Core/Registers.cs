@@ -67,6 +67,12 @@ public record struct Registers
     }
 
     /// <summary>
+    /// Clears the given flag from the processor status register.
+    /// </summary>
+    /// <param name="flag">This flag will be unset.</param>
+    public void ClearFlag(Flags flag) => P &= ~flag;
+
+    /// <summary>
     /// Sets the carry flag based on the given value. Given the result of an
     /// operation, sets the carry flag based on whether or not the result
     /// overflowed the max value for a byte. Otherwise, the carry flag is
