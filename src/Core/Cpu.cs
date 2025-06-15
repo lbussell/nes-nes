@@ -103,6 +103,12 @@ public class Cpu
         opcodes[0x21] = new("AND", and, AddressingMode.IndirectX, 6);
         opcodes[0x31] = new("AND", and, AddressingMode.IndirectY, 5);
 
+        opcodes[0x0A] = new("ASL", Implicit(AslA), AddressingMode.Implicit, 2);
+        opcodes[0x06] = new("ASL", AslMemory, AddressingMode.ZeroPage, 5);
+        opcodes[0x16] = new("ASL", AslMemory, AddressingMode.ZeroPageX, 6);
+        opcodes[0x0E] = new("ASL", AslMemory, AddressingMode.Absolute, 6);
+        opcodes[0x1E] = new("ASL", AslMemory, AddressingMode.AbsoluteX, 7);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -148,7 +154,6 @@ public class Cpu
     /// <c>A,Z,C,N = A+M+C;</c>
     /// Add the operand plus the carry flag to the accumulator.
     /// </summary>
-    /// <param name="operand"></param>
     private void Adc(byte operand)
     {
         int sum = _registers.A + operand + _registers.Carry;
@@ -169,7 +174,6 @@ public class Cpu
     /// <summary>
     /// Logical AND between the accumulator and operand.
     /// </summary>
-    /// <param name="operand"></param>
     private void And(byte operand)
     {
         _registers.A &= operand;
@@ -177,9 +181,35 @@ public class Cpu
     }
 
     /// <summary>
+    /// Arithmetic shift left on accumulator.
+    /// </summary>
+    private void AslA()
+    {
+        int result = _registers.A << 1;
+        _registers.A = (byte)result;
+        _registers.SetCarry(result);
+        _registers.SetZeroAndNegative(_registers.A);
+    }
+
+    /// <summary>
+    /// Arithmetic shift left on a memory location.
+    /// </summary>
+    private int AslMemory(AddressingMode mode)
+    {
+        var addressResult = GetAddress(mode);
+        byte operand = _memory[addressResult.Address];
+
+        int result = operand << 1;
+        _registers.SetCarry(result);
+        _registers.SetZeroAndNegative((byte)result);
+        _memory[addressResult.Address] = (byte)result;
+
+        return addressResult.ExtraCycles;
+    }
+
+    /// <summary>
     /// A,Z,C,N = A-M-(1-C)
     /// </summary>
-    /// <param name="operand"></param>
     private void Sbc(byte operand)
     {
         // Since ADC is correctly implemented, we can use it to implement SBC.

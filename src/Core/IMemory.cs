@@ -38,6 +38,17 @@ namespace NesNes.Core;
 public interface IMemory
 {
     /// <summary>
+    /// Index accessor for reading and writing memory at a specific address.
+    /// </summary>
+    /// <param name="address">The memory address to access.</param>
+    /// <returns>The byte value at the specified address when reading.</returns>
+    public byte this[ushort address]
+    {
+        get => Read8(address);
+        set => Write8(address, value);
+    }
+
+    /// <summary>
     /// Read 8 bits of memory from the specified address.
     /// </summary>
     /// <param name="address">Memory will be read from this address.</param>
