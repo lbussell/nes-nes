@@ -60,8 +60,7 @@ public record struct Registers
 
     public override readonly string ToString()
     {
-        return
-            $"""
+        return $"""
             PC   A  X  Y  NV1BDIZC SP
             {PC:X4} {A:X2} {X:X2} {Y:X2} {(byte)P:B8} {SP:X2}
             """;

@@ -110,6 +110,13 @@ public class Cpu
         opcodes[0x1E] = new("ASL", AslMemory, AddressingMode.AbsoluteX, 7);
 
         opcodes[0x90] = new("BCC", Bcc, AddressingMode.Relative, 2);
+        opcodes[0xB0] = new("BCS", Bcs, AddressingMode.Relative, 2);
+        opcodes[0xF0] = new("BEQ", Beq, AddressingMode.Relative, 2);
+        opcodes[0x30] = new("BMI", Bmi, AddressingMode.Relative, 2);
+        opcodes[0xD0] = new("BNE", Bne, AddressingMode.Relative, 2);
+        opcodes[0x10] = new("BPL", Bpl, AddressingMode.Relative, 2);
+        opcodes[0x50] = new("BVC", Bvc, AddressingMode.Relative, 2);
+        opcodes[0x70] = new("BVS", Bvs, AddressingMode.Relative, 2);
 
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
@@ -210,25 +217,62 @@ public class Cpu
     }
 
     /// <summary>
-    /// Branch if the carry flag is clear. 1 extra cycle if the branch is taken,
-    /// and an additional cycle if a page boundary is crossed.
+    /// Branch if the carry flag is clear.
     /// </summary>
-    private int Bcc(AddressingMode mode) =>
-        BranchIf(() => !_registers.P.HasFlag(Flags.Carry), mode);
+    private int Bcc(AddressingMode mode) => BranchIf(Flags.Carry, false, mode);
 
     /// <summary>
-    /// Branch if the given predicate is true. Takes one extra cycle if the
-    /// branch is taken, and 1 additional cycle on top of that if a page
-    /// boundary is crossed.
+    /// Branch if the carry flag is set.
+    /// </summary>
+    private int Bcs(AddressingMode mode) => BranchIf(Flags.Carry, true, mode);
+
+    /// <summary>
+    /// Branch if the zero flag is set (equal).
+    /// </summary>
+    private int Beq(AddressingMode mode) => BranchIf(Flags.Zero, true, mode);
+
+    // BIT
+
+    /// <summary>
+    /// Branch if the negative flag is set (minus).
+    /// </summary>
+    private int Bmi(AddressingMode mode) => BranchIf(Flags.Negative, true, mode);
+
+    /// <summary>
+    /// Branch if the zero flag is clear (not equal).
+    /// </summary>
+    private int Bne(AddressingMode mode) => BranchIf(Flags.Zero, false, mode);
+
+    /// <summary>
+    /// Branch if the negative flag is clear (plus).
+    /// </summary>
+    private int Bpl(AddressingMode mode) => BranchIf(Flags.Negative, false, mode);
+
+    // BRK
+
+    /// <summary>
+    /// Branch if the overflow flag is clear.
+    /// </summary>
+    private int Bvc(AddressingMode mode) => BranchIf(Flags.Overflow, false, mode);
+
+    /// <summary>
+    /// Branch if the overflow flag is set.
+    /// </summary>
+    private int Bvs(AddressingMode mode) => BranchIf(Flags.Overflow, true, mode);
+
+    /// <summary>
+    /// Branch if the given flag matches the expected value. Takes one extra
+    /// cycle if the branch is taken, and 1 additional cycle on top of that if a
+    /// page boundary is crossed.
     /// </summary>
     /// <returns>Additional CPU cycles taken.</returns>
-    private int BranchIf(Func<bool> predicate, AddressingMode mode)
+    private int BranchIf(Flags flag, bool expectedValue, AddressingMode mode)
     {
         // Always fetch the address, since we need to advance the program counter.
         var addressResult = GetAddress(mode);
 
-        // If the carry flag is clear, branch to the target address.
-        if (predicate())
+        // If the flag matches the expected value, branch to the target address.
+        if (_registers.P.HasFlag(flag) == expectedValue)
         {
             // If the branch crosses a page boundary, add an extra cycle.
             var extraCycles = 1 + CalculatePageCrossPenalty(_registers.PC, addressResult.Address);
