@@ -118,6 +118,9 @@ public class Cpu
         opcodes[0x50] = new("BVC", Bvc, AddressingMode.Relative, 2);
         opcodes[0x70] = new("BVS", Bvs, AddressingMode.Relative, 2);
 
+        opcodes[0x24] = new("BIT", UseOperand(Bit), AddressingMode.ZeroPage, 3);
+        opcodes[0x2C] = new("BIT", UseOperand(Bit), AddressingMode.Absolute, 4);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -231,8 +234,6 @@ public class Cpu
     /// </summary>
     private int Beq(AddressingMode mode) => BranchIf(Flags.Zero, true, mode);
 
-    // BIT
-
     /// <summary>
     /// Branch if the negative flag is set (minus).
     /// </summary>
@@ -282,6 +283,27 @@ public class Cpu
 
         // Since the branch was not taken, we incurred 0 extra cycles.
         return 0;
+    }
+
+    /// <summary>
+    /// This instructions is used to test if one or more bits are set in a
+    /// target memory location. The mask pattern in A is ANDed with the value in
+    /// memory to set or clear the zero flag, but the result is not kept.
+    /// Bits 7 and 6 of the value from memory are copied into the N and V flags.
+    /// </summary>
+    private void Bit(byte operand)
+    {
+        // Perform a bitwise AND between the accumulator and the operand.
+        byte result = (byte)(_registers.A & operand);
+
+        // Set the zero flag if the result is zero.
+        _registers.SetZero(result);
+
+        // Set the negative flag to the 7th bit of the operand.
+        _registers.SetNegative(operand);
+
+        // Set the overflow flag to the 6th bit of the operand.
+        _registers.SetOverflow((operand & 0b_0100_0000) != 0);
     }
 
     /// <summary>
