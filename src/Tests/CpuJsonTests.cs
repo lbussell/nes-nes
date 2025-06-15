@@ -12,24 +12,47 @@ namespace NesNes.Tests;
 /// </summary>
 public class CpuJsonTests
 {
+    private static readonly string s_testDataDirectory = Path.Combine("TestData", "json");
+
     /// <summary>
     /// Gets test data for all JSON files in the TestData/json directory.
     /// Each item represents one JSON file containing processor tests.
     /// </summary>
     public static IEnumerable<TheoryDataRow<string>> GetTestData()
     {
-        var testDataPath = Path.Combine("TestData", "json");
-        if (!Directory.Exists(testDataPath))
+        if (!Directory.Exists(s_testDataDirectory))
         {
-            yield break;
+            throw new DirectoryNotFoundException(
+                $"Cannot find test data directory '{s_testDataDirectory}'."
+            );
         }
 
-        var jsonFiles = Directory.GetFiles(testDataPath, "*.json").OrderBy(f => f).ToArray();
+        var opcodes = new Cpu(new Registers(), new TestMemory())
+            .GetImplementedOpcodes()
+            .Select(o => o.ToString("X2"));
 
-        foreach (var file in jsonFiles)
+        var jsonOpcodes = Directory
+            .GetFiles(s_testDataDirectory, "*.json")
+            .Select(filePath => Path.GetFileNameWithoutExtension(filePath));
+
+        var opcodePaths = opcodes.Select(opcode =>
+            Path.Combine(s_testDataDirectory, $"{opcode}.json")
+        );
+
+        var unsupportedOpcodes = jsonOpcodes.Except(opcodes, StringComparer.OrdinalIgnoreCase);
+        if (unsupportedOpcodes.Any())
         {
-            yield return new(file);
+            TestContext.Current.AddWarning(
+                $"""
+                Unsupported opcodes:
+
+                {string.Join(Environment.NewLine, unsupportedOpcodes)}
+
+                """
+            );
         }
+
+        return opcodePaths.Select(filePath => new TheoryDataRow<string>(filePath));
     }
 
     /// <summary>

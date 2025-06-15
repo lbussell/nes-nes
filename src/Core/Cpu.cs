@@ -44,11 +44,11 @@ public class Cpu
     {
         var implementedOpcodes = new List<byte>();
 
-        for (byte i = 0; i < _instructions.Length; i += 1)
+        for (int i = 0; i < _instructions.Length; i += 1)
         {
             if (_instructions[i].HasValue())
             {
-                implementedOpcodes.Add(i);
+                implementedOpcodes.Add((byte)i);
             }
         }
 
