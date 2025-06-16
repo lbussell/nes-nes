@@ -106,9 +106,16 @@ public class CpuJsonTests
 
         cpu.Registers.ShouldBe(
             testCase.Final.GetRegisters(),
-            $"Test case '{testCase.Name}' failed: Registers do not match."
+            $"""
+            Test case '{testCase.Name}' failed: Registers do not match.
+            """
         );
 
-        memory.GetMemorySnapshot().ShouldBe(testCase.Final.Ram);
+        memory
+            .GetMemorySnapshot()
+            .ShouldBe(
+                testCase.Final.Ram,
+                $"Test case '{testCase.Name}' failed: Memory does not match."
+            );
     }
 }

@@ -261,7 +261,10 @@ public class Cpu
         opcodes[0x01] = new("ORA", orA, AddressingMode.IndirectX, 6);
         opcodes[0x11] = new("ORA", orA, AddressingMode.IndirectY, 5);
 
-        opcodes[0x48] = new("PHA", Implicit(() => PushStack(_registers.A)), AddressingMode.Implicit, 3);
+        opcodes[0x48] = new("PHA", Implicit(PushA), AddressingMode.Implicit, 3);
+        opcodes[0x08] = new("PHP", Implicit(PushP), AddressingMode.Implicit, 3);
+        opcodes[0x68] = new("PLA", Implicit(PullA), AddressingMode.Implicit, 4);
+        opcodes[0x28] = new("PLP", Implicit(PullP), AddressingMode.Implicit, 4);
 
         var sbc = UseOperand(Sbc);
         opcodes[0xE9] = new("SBC", sbc, AddressingMode.Immediate, 2);
@@ -287,6 +290,17 @@ public class Cpu
     {
         _memory[(ushort)(MemoryRegions.Stack + _registers.SP)] = value;
         _registers.SP -= 1;
+    }
+
+    /// <summary>
+    /// Pulls a single 8-bit value from the stack. The stack pointer is
+    /// incremented after pulling the value.
+    /// </summary>
+    private byte PullStack()
+    {
+        _registers.SP += 1;
+        var result = _memory[(ushort)(MemoryRegions.Stack + _registers.SP)];
+        return result;
     }
 
     /// <summary>
@@ -628,6 +642,48 @@ public class Cpu
     {
         _registers.A |= operand;
         _registers.SetZeroAndNegative(_registers.A);
+    }
+
+    /// <summary>
+    /// Push the processor status flags onto the stack. This is only one of two
+    /// instructions which set the B flag.
+    /// </summary>
+    private void PushA()
+    {
+        PushStack(_registers.A);
+    }
+
+    /// <summary>
+    /// Push the processor status flags onto the stack. This is only one of two
+    /// instructions which set the B flag.
+    /// </summary>
+    private void PushP()
+    {
+        Flags status = _registers.P;
+        status |= Flags.B;
+        PushStack((byte)status);
+    }
+
+    /// <summary>
+    /// Pull an 8-bit value from the stack into the accumulator (A), setting
+    /// the zero and negative flags as appropriate.
+    /// </summary>
+    private void PullA()
+    {
+        _registers.A = PullStack();
+        _registers.SetZeroAndNegative(_registers.A);
+    }
+
+    /// <summary>
+    /// Pull an 8-bit value from the stack and overwrites all processor flags
+    /// with the value, except for the B flag and the unused flag which are set
+    /// according to special rules.
+    /// </summary>
+    private void PullP()
+    {
+        _registers.P = (Flags)PullStack();
+        _registers.SetFlag(Flags.Unused);
+        _registers.SetFlag(Flags.B, false);
     }
 
     private void Tax()

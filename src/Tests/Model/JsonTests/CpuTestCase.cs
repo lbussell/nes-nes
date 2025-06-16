@@ -43,9 +43,6 @@ public record CpuTestCase(string Name, CpuState Initial, CpuState Final)
             Memory:
             {MemoryToString(Initial.Ram)}
 
-            Disassembly:
-            {string.Join(Environment.NewLine, disassembly)}
-
             Expected state
             ----
             Registers:
