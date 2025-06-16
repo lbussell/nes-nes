@@ -10,7 +10,7 @@ namespace NesNes.Tests;
 /// Only stores memory that has been explicitly written to or initialized.
 /// Throws an exception when reading from uninitialized memory locations.
 /// </summary>
-public class TestMemory : IMemory
+public class DictionaryMemory : IMemory
 {
     private readonly Dictionary<ushort, byte> _memory = [];
 

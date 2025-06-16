@@ -24,7 +24,7 @@ public record CpuTestCase(string Name, CpuState Initial, CpuState Final)
 
     public override string ToString()
     {
-        var cpu = new Cpu(new Registers(), new TestMemory());
+        var cpu = new Cpu(new Registers(), new DictionaryMemory());
 
         // Program is laid out like [[address, value], [address, value], ...],
         // so select the second item in each row for the program data.

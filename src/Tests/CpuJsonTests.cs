@@ -27,7 +27,7 @@ public class CpuJsonTests
             );
         }
 
-        var opcodes = new Cpu(new Registers(), new TestMemory())
+        var opcodes = new Cpu(new Registers(), new DictionaryMemory())
             .GetImplementedOpcodes()
             .Select(o => o.ToString("X2"));
 
@@ -81,7 +81,7 @@ public class CpuJsonTests
     private static void RunTestCase(CpuTestCase testCase)
     {
         // Setup test memory and CPU
-        var memory = new TestMemory();
+        var memory = new DictionaryMemory();
         memory.Initialize(testCase.Initial.Ram);
 
         var initialRegisters = testCase.Initial.GetRegisters();
