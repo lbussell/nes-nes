@@ -242,6 +242,13 @@ public class Cpu
         opcodes[0xAC] = new("LDY", ldy, AddressingMode.Absolute, 4);
         opcodes[0xBC] = new("LDY", ldy, AddressingMode.AbsoluteX, 4);
 
+        var lsr = UseAddress(LsrMemory);
+        opcodes[0x4A] = new("LSR", Implicit(LsrA), AddressingMode.Implicit, 2);
+        opcodes[0x46] = new("LSR", lsr, AddressingMode.ZeroPage, 5);
+        opcodes[0x56] = new("LSR", lsr, AddressingMode.ZeroPageX, 6);
+        opcodes[0x4E] = new("LSR", lsr, AddressingMode.Absolute, 6);
+        opcodes[0x5E] = new("LSR", lsr, AddressingMode.AbsoluteX, 7);
+
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
 
         opcodes[0x48] = new("PHA", Implicit(() => PushStack(_registers.A)), AddressingMode.Implicit, 3);
@@ -574,6 +581,33 @@ public class Cpu
     {
         _registers.Y = operand;
         _registers.SetZeroAndNegative(_registers.Y);
+    }
+
+    /// <summary>
+    /// Each of the bits in A is shifted one place to the right. The bit that
+    /// was in bit 0 is shifted into the carry flag. Bit 7 is set to zero.
+    /// Zero and negative flags are set as appropriate.
+    /// </summary>
+    private void LsrA()
+    {
+        _registers.SetFlag(Flags.Carry, (_registers.A & 0x01) != 0);
+        _registers.A >>= 1;
+        _registers.SetZeroAndNegative(_registers.A);
+    }
+
+    /// <summary>
+    /// Each of the bits in memory is shifted one place to the right. The bit
+    /// that was in bit 0 is shifted into the carry flag. Bit 7 is set to zero.
+    /// Zero and negative flags are set as appropriate.
+    /// </summary>
+    private void LsrMemory(ushort address)
+    {
+        byte value = _memory[address];
+        _registers.SetFlag(Flags.Carry, (value & 0x01) != 0);
+        byte result = (byte)(value >> 1);
+        _memory[address] = result;
+        _registers.SetZeroAndNegative(result);
+        // TODO: Maybe ignore page cross penalty?
     }
 
     private void Tax()
