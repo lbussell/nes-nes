@@ -317,6 +317,11 @@ public class Cpu
         opcodes[0x8C] = new("STY", sty, AddressingMode.Absolute, 4);
 
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
+        opcodes[0xA8] = new("TAY", Implicit(Tay), AddressingMode.Implicit, 2);
+        opcodes[0xBA] = new("TSX", Implicit(Tsx), AddressingMode.Implicit, 2);
+        opcodes[0x8A] = new("TXA", Implicit(Txa), AddressingMode.Implicit, 2);
+        opcodes[0x9A] = new("TXS", Implicit(Txs), AddressingMode.Implicit, 2);
+        opcodes[0x98] = new("TYA", Implicit(Tya), AddressingMode.Implicit, 2);
 
         // csharpier-ignore-end
 
@@ -835,11 +840,62 @@ public class Cpu
         _registers.PC += 1;
     }
 
+    /// <summary>
+    /// Transfer the value in the accumulator to the X register.
+    /// </summary>
     private void Tax()
     {
-        // Transfer the value in the accumulator to the X register.
         _registers.X = _registers.A;
         _registers.SetZeroAndNegative(_registers.X);
+    }
+
+    /// <summary>
+    /// Copies the current contents of the accumulator into the Y register and
+    /// sets the zero and negative flags as appropriate.
+    /// </summary>
+    private void Tay()
+    {
+        _registers.Y = _registers.A;
+        _registers.SetZeroAndNegative(_registers.Y);
+    }
+
+    /// <summary>
+    /// Copies the current contents of the stack register into the X register
+    /// and sets the zero and negative flags as appropriate.
+    /// </summary>
+    private void Tsx()
+    {
+        _registers.X = _registers.SP;
+        _registers.SetZeroAndNegative(_registers.X);
+    }
+
+    /// <summary>
+    /// Copies the current contents of the X register into the accumulator and
+    /// sets the zero and negative flags as appropriate.
+    /// </summary>
+    private void Txa()
+    {
+        _registers.A = _registers.X;
+        _registers.SetZeroAndNegative(_registers.A);
+    }
+
+    /// <summary>
+    /// Copies the current contents of the accumulator into the Y register and
+    /// sets the zero and negative flags as appropriate.
+    /// </summary>
+    private void Txs()
+    {
+        _registers.SP = _registers.X;
+    }
+
+    /// <summary>
+    /// Copies the current contents of the X register into the accumulator and
+    /// sets the zero and negative flags as appropriate.
+    /// </summary>
+    private void Tya()
+    {
+        _registers.A = _registers.Y;
+        _registers.SetZeroAndNegative(_registers.A);
     }
 
     #endregion
