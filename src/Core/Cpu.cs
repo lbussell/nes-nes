@@ -297,6 +297,25 @@ public class Cpu
         opcodes[0xF8] = new("SED", Implicit(() => _registers.SetFlag(Flags.DecimalMode)), AddressingMode.Implicit, 2);
         opcodes[0x78] = new("SEI", Implicit(() => _registers.SetFlag(Flags.InterruptDisable)), AddressingMode.Implicit, 2);
 
+        var sta = UseAddress(address => _memory[address] = _registers.A);
+        opcodes[0x85] = new("STA", sta, AddressingMode.ZeroPage, 3);
+        opcodes[0x95] = new("STA", sta, AddressingMode.ZeroPageX, 4);
+        opcodes[0x8D] = new("STA", sta, AddressingMode.Absolute, 4);
+        opcodes[0x9D] = new("STA", sta, AddressingMode.AbsoluteX, 5);
+        opcodes[0x99] = new("STA", sta, AddressingMode.AbsoluteY, 5);
+        opcodes[0x81] = new("STA", sta, AddressingMode.IndirectX, 6);
+        opcodes[0x91] = new("STA", sta, AddressingMode.IndirectY, 6);
+
+        var stx = UseAddress(address => _memory[address] = _registers.X);
+        opcodes[0x86] = new("STX", stx, AddressingMode.ZeroPage, 3);
+        opcodes[0x96] = new("STX", stx, AddressingMode.ZeroPageY, 4);
+        opcodes[0x8E] = new("STX", stx, AddressingMode.Absolute, 4);
+
+        var sty = UseAddress(address => _memory[address] = _registers.Y);
+        opcodes[0x84] = new("STY", sty, AddressingMode.ZeroPage, 3);
+        opcodes[0x94] = new("STY", sty, AddressingMode.ZeroPageX, 4);
+        opcodes[0x8C] = new("STY", sty, AddressingMode.Absolute, 4);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         // csharpier-ignore-end
