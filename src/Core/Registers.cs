@@ -73,6 +73,29 @@ public record struct Registers
     public void ClearFlag(Flags flag) => P &= ~flag;
 
     /// <summary>
+    /// Sets the given flag in the processor status register.
+    /// </summary>
+    /// <param name="flag">This flag will be set.</param>
+    public void SetFlag(Flags flag) => P |= flag;
+
+    /// <summary>
+    /// Sets the given flag in the processor status register.
+    /// </summary>
+    /// <param name="flag">This flag will be set.</param>
+    /// <param name="value">Set the flag according to the given value.</param>
+    public void SetFlag(Flags flag, bool value)
+    {
+        if (value)
+        {
+            SetFlag(flag);
+        }
+        else
+        {
+            ClearFlag(flag);
+        }
+    }
+
+    /// <summary>
     /// Sets the carry flag based on the given value. Given the result of an
     /// operation, sets the carry flag based on whether or not the result
     /// overflowed the max value for a byte. Otherwise, the carry flag is
@@ -140,21 +163,6 @@ public record struct Registers
         else
         {
             P &= ~Flags.Negative; // Clear the negative flag
-        }
-    }
-
-    /// <summary>
-    /// Simply set or clears the overflow flag based on the given boolean.
-    /// </summary>
-    public void SetOverflow(bool value)
-    {
-        if (value)
-        {
-            P |= Flags.Overflow;
-        }
-        else
-        {
-            P &= ~Flags.Overflow;
         }
     }
 }

@@ -147,6 +147,15 @@ public class Cpu
             2
         );
 
+        opcodes[0xC9] = new("CMP", UseOperand(Cmp), AddressingMode.Immediate, 2);
+        opcodes[0xC5] = new("CMP", UseOperand(Cmp), AddressingMode.ZeroPage, 3);
+        opcodes[0xD5] = new("CMP", UseOperand(Cmp), AddressingMode.ZeroPageX, 4);
+        opcodes[0xCD] = new("CMP", UseOperand(Cmp), AddressingMode.Absolute, 4);
+        opcodes[0xDD] = new("CMP", UseOperand(Cmp), AddressingMode.AbsoluteX, 4);
+        opcodes[0xD9] = new("CMP", UseOperand(Cmp), AddressingMode.AbsoluteY, 4);
+        opcodes[0xC1] = new("CMP", UseOperand(Cmp), AddressingMode.IndirectX, 6);
+        opcodes[0xD1] = new("CMP", UseOperand(Cmp), AddressingMode.IndirectY, 5);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -204,7 +213,7 @@ public class Cpu
         // XOR'ing the oprerands and the sum will set the high bit if the signs
         // of the sums differ. Then, we can just check the high bit (0x80).
         // If the high bit is set, then the operation overflowed.
-        _registers.SetOverflow(((_registers.A ^ sum) & (operand ^ sum) & 0x80) != 0);
+        _registers.SetFlag(Flags.Overflow, ((_registers.A ^ sum) & (operand ^ sum) & 0x80) != 0);
 
         _registers.A = (byte)(sum & 0xFF); // Store only the lower 8 bits
     }
@@ -288,6 +297,17 @@ public class Cpu
     private int Bvs(AddressingMode mode) => BranchIf(Flags.Overflow, true, mode);
 
     /// <summary>
+    /// This instruction compares the contents of the accumulator with another
+    /// memory held value and sets the zero and carry flags as appropriate.
+    /// </summary>
+    private void Cmp(byte operand)
+    {
+        byte result = (byte)(_registers.A - operand);
+        _registers.SetZeroAndNegative(result);
+        _registers.SetFlag(Flags.Carry, _registers.A >= operand);
+    }
+
+    /// <summary>
     /// Branch if the given flag matches the expected value. Takes one extra
     /// cycle if the branch is taken, and 1 additional cycle on top of that if a
     /// page boundary is crossed.
@@ -329,7 +349,7 @@ public class Cpu
         _registers.SetNegative(operand);
 
         // Set the overflow flag to the 6th bit of the operand.
-        _registers.SetOverflow((operand & 0b_0100_0000) != 0);
+        _registers.SetFlag(Flags.Overflow, (operand & 0b_0100_0000) != 0);
     }
 
     /// <summary>
