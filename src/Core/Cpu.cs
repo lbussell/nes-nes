@@ -273,6 +273,13 @@ public class Cpu
         opcodes[0x2E] = new("ROL", rol, AddressingMode.Absolute, 6);
         opcodes[0x3E] = new("ROL", rol, AddressingMode.AbsoluteX, 7);
 
+        var ror = UseAddress(RotateRightMemory);
+        opcodes[0x6A] = new("ROR", Implicit(RotateRightA), AddressingMode.Implicit, 2);
+        opcodes[0x66] = new("ROR", ror, AddressingMode.ZeroPage, 5);
+        opcodes[0x76] = new("ROR", ror, AddressingMode.ZeroPageX, 6);
+        opcodes[0x6E] = new("ROR", ror, AddressingMode.Absolute, 6);
+        opcodes[0x7E] = new("ROR", ror, AddressingMode.AbsoluteX, 7);
+
         var sbc = UseOperand(Sbc);
         opcodes[0xE9] = new("SBC", sbc, AddressingMode.Immediate, 2);
         opcodes[0xE5] = new("SBC", sbc, AddressingMode.ZeroPage, 3);
@@ -724,6 +731,46 @@ public class Cpu
         value = (byte)((value << 1) | carryValue);
 
         _registers.SetFlag(Flags.Carry, oldBit7);
+        _registers.SetZeroAndNegative(value);
+
+        return value;
+    }
+
+    /// <summary>
+    /// Rotate accumulator right one bit.
+    /// </summary>
+    private void RotateRightA()
+    {
+        _registers.A = RotateRight(_registers.A);
+    }
+
+    /// <summary>
+    /// Rotate byte in memory right one bit.
+    /// </summary>
+    private void RotateRightMemory(ushort address)
+    {
+        _memory[address] = RotateRight(_memory[address]);
+    }
+
+    /// <summary>
+    /// Move each of the bits in either A or M one place to the right. Bit 7 is
+    /// filled with the current value of the carry flag whilst the old bit 0
+    /// becomes the new carry flag value.
+    /// </summary>
+    /// <returns>The new value after the rotation.</returns>
+    private byte RotateRight(byte value)
+    {
+        // Get the current carry flag value.
+        byte carryValue = _registers.Carry;
+
+        // Check if the old bit 0 is set.
+        bool oldBit0 = (value & 0x01) != 0;
+
+        // Shift the bits to the right and set the new bit 7 to the old carry flag.
+        value = (byte)((value >> 1) | (carryValue << 7));
+
+        // Set the carry flag to the old bit 0.
+        _registers.SetFlag(Flags.Carry, oldBit0);
         _registers.SetZeroAndNegative(value);
 
         return value;
