@@ -216,6 +216,8 @@ public class Cpu
         opcodes[0x4C] = new("JMP", UseAddress(Jmp), AddressingMode.Absolute, 3);
         opcodes[0x6C] = new("JMP", UseAddress(Jmp), AddressingMode.Indirect, 5);
 
+        opcodes[0x48] = new("PHA", Implicit(() => PushStack(_registers.A)), AddressingMode.Implicit, 3);
+
         var lda = UseOperand(Lda);
         opcodes[0xA9] = new("LDA", lda, AddressingMode.Immediate, 2);
         opcodes[0xA5] = new("LDA", lda, AddressingMode.ZeroPage, 3);
@@ -242,6 +244,8 @@ public class Cpu
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
 
+        opcodes[0x48] = new("PHA", Implicit(() => PushStack(_registers.A)), AddressingMode.Implicit, 3);
+
         var sbc = UseOperand(Sbc);
         opcodes[0xE9] = new("SBC", sbc, AddressingMode.Immediate, 2);
         opcodes[0xE5] = new("SBC", sbc, AddressingMode.ZeroPage, 3);
@@ -257,6 +261,15 @@ public class Cpu
         // csharpier-ignore-end
 
         return opcodes;
+    }
+
+    /// <summary>
+    /// Pushes a value onto the stack.
+    /// </summary>
+    private void PushStack(byte value)
+    {
+        _memory[(ushort)(MemoryRegions.Stack + _registers.SP)] = value;
+        _registers.SP -= 1;
     }
 
     /// <summary>
