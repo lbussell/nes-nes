@@ -280,6 +280,8 @@ public class Cpu
         opcodes[0x6E] = new("ROR", ror, AddressingMode.Absolute, 6);
         opcodes[0x7E] = new("ROR", ror, AddressingMode.AbsoluteX, 7);
 
+        opcodes[0x40] = new("RTI", Implicit(Rti), AddressingMode.Implicit, 6);
+
         var sbc = UseOperand(Sbc);
         opcodes[0xE9] = new("SBC", sbc, AddressingMode.Immediate, 2);
         opcodes[0xE5] = new("SBC", sbc, AddressingMode.ZeroPage, 3);
@@ -315,6 +317,17 @@ public class Cpu
         _registers.SP += 1;
         var result = _memory[(ushort)(MemoryRegions.Stack + _registers.SP)];
         return result;
+    }
+
+    /// <summary>
+    /// Pulls a 16-bit value from the stack.
+    /// </summary>
+    /// <returns></returns>
+    private ushort PullStack16()
+    {
+        byte low = PullStack();
+        byte high = PullStack();
+        return (ushort)((high << 8) | low);
     }
 
     /// <summary>
@@ -774,6 +787,17 @@ public class Cpu
         _registers.SetZeroAndNegative(value);
 
         return value;
+    }
+
+    /// <summary>
+    /// The RTI instruction is used at the end of an interrupt processing
+    /// routine. It pulls the processor flags from the stack followed by the
+    /// program counter.
+    /// </summary>
+    private void Rti()
+    {
+        PullP();
+        _registers.PC = PullStack16();
     }
 
     private void Tax()
