@@ -216,8 +216,7 @@ public class Cpu
 
         opcodes[0x4C] = new("JMP", UseAddress(Jmp), AddressingMode.Absolute, 3);
         opcodes[0x6C] = new("JMP", UseAddress(Jmp), AddressingMode.Indirect, 5);
-
-        opcodes[0x48] = new("PHA", Implicit(() => PushStack(_registers.A)), AddressingMode.Implicit, 3);
+        opcodes[0x20] = new("JSR", UseAddress(Jsr), AddressingMode.Absolute, 6);
 
         var lda = UseOperand(Lda);
         opcodes[0xA9] = new("LDA", lda, AddressingMode.Immediate, 2);
@@ -265,12 +264,24 @@ public class Cpu
     }
 
     /// <summary>
-    /// Pushes a value onto the stack.
+    /// Pushes a single 8-bit value onto the stack.
     /// </summary>
     private void PushStack(byte value)
     {
         _memory[(ushort)(MemoryRegions.Stack + _registers.SP)] = value;
         _registers.SP -= 1;
+    }
+
+    /// <summary>
+    /// Pushes a 16-bit value onto the stack.
+    /// </summary>
+    private void PushStack(ushort value)
+    {
+        byte low = (byte)(value & 0x00FF);
+        byte high = (byte)(value >> 8);
+
+        PushStack(high);
+        PushStack(low);
     }
 
     /// <summary>
@@ -508,6 +519,20 @@ public class Cpu
     /// </summary>
     private void Jmp(ushort address)
     {
+        // Set the program counter to the target address.
+        _registers.PC = address;
+    }
+
+    /// <summary>
+    /// The JSR instruction pushes the address (minus one) of the return point
+    /// on to the stack and then sets the program counter to the target memory
+    /// address.
+    /// </summary>
+    private void Jsr(ushort address)
+    {
+        // Push the return address (minus one) onto the stack.
+        PushStack((ushort)(_registers.PC - 1));
+
         // Set the program counter to the target address.
         _registers.PC = address;
     }
