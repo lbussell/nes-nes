@@ -266,6 +266,13 @@ public class Cpu
         opcodes[0x68] = new("PLA", Implicit(PullA), AddressingMode.Implicit, 4);
         opcodes[0x28] = new("PLP", Implicit(PullP), AddressingMode.Implicit, 4);
 
+        var rol = UseAddress(RotateLeftMemory);
+        opcodes[0x2A] = new("ROL", Implicit(RotateLeftA), AddressingMode.Implicit, 2);
+        opcodes[0x26] = new("ROL", rol, AddressingMode.ZeroPage, 5);
+        opcodes[0x36] = new("ROL", rol, AddressingMode.ZeroPageX, 6);
+        opcodes[0x2E] = new("ROL", rol, AddressingMode.Absolute, 6);
+        opcodes[0x3E] = new("ROL", rol, AddressingMode.AbsoluteX, 7);
+
         var sbc = UseOperand(Sbc);
         opcodes[0xE9] = new("SBC", sbc, AddressingMode.Immediate, 2);
         opcodes[0xE5] = new("SBC", sbc, AddressingMode.ZeroPage, 3);
@@ -684,6 +691,42 @@ public class Cpu
         _registers.P = (Flags)PullStack();
         _registers.SetFlag(Flags.Unused);
         _registers.SetFlag(Flags.B, false);
+    }
+
+    /// <summary>
+    /// Rotate accumulator left one bit.
+    /// </summary>
+    private void RotateLeftA()
+    {
+        _registers.A = RotateLeft(_registers.A);
+    }
+
+    /// <summary>
+    /// Rotate byte in memory left one bit.
+    /// </summary>
+    private void RotateLeftMemory(ushort address)
+    {
+        _memory[address] = RotateLeft(_memory[address]);
+    }
+
+    /// <summary>
+    /// Move each of the bits of <c>value</c> one place to the left. Bit 0 is
+    /// filled with the current value of the carry flag whilst the old bit 7
+    /// becomes the new carry flag value. Set zero and negative flags as
+    /// appropriate.
+    /// </summary>
+    /// <returns>The new value after the rotation.</returns>
+    private byte RotateLeft(byte value)
+    {
+        byte carryValue = _registers.Carry;
+        bool oldBit7 = (value & 0x80) != 0;
+
+        value = (byte)((value << 1) | carryValue);
+
+        _registers.SetFlag(Flags.Carry, oldBit7);
+        _registers.SetZeroAndNegative(value);
+
+        return value;
     }
 
     private void Tax()
