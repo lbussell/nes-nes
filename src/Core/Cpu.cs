@@ -169,6 +169,9 @@ public class Cpu
         opcodes[0xE8] = new("INX", Implicit(() => Increment(ref _registers.X)), AddressingMode.Implicit, 2);
         opcodes[0xC8] = new("INY", Implicit(() => Increment(ref _registers.Y)), AddressingMode.Implicit, 2);
 
+        opcodes[0x4C] = new("JMP", UseAddress(Jmp), AddressingMode.Absolute, 3);
+        opcodes[0x6C] = new("JMP", UseAddress(Jmp), AddressingMode.Indirect, 5);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -443,6 +446,15 @@ public class Cpu
     }
 
     /// <summary>
+    /// Set the program counter to the address specified by the operand.
+    /// </summary>
+    private void Jmp(ushort address)
+    {
+        // Set the program counter to the target address.
+        _registers.PC = address;
+    }
+
+    /// <summary>
     /// A,Z,C,N = A-M-(1-C)
     /// </summary>
     private void Sbc(byte operand)
@@ -573,8 +585,14 @@ public class Cpu
 
         AddressResult Indirect()
         {
-            ushort targetPointer = Fetch16();
-            ushort targetAddress = _memory.Read16(targetPointer);
+            ushort lsbAddress = Fetch16();
+
+            byte lsb = _memory[lsbAddress];
+            // Handle wrap-around for the second byte
+            ushort msbAddress = (ushort)((lsbAddress & 0xFF00) + (byte)(lsbAddress + 1));
+            byte msb = _memory[msbAddress];
+            ushort targetAddress = (ushort)((msb << 8) | lsb);
+
             return new AddressResult(targetAddress, 0);
         }
 
