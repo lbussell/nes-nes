@@ -59,4 +59,14 @@ public record struct Registers
             {PC:X4} {A:X2} {X:X2} {Y:X2} {(byte)P:B8} {SP:X2}
             """;
     }
+
+    public static readonly Registers Initial = new()
+    {
+        PC = 0xC000, // Initial program counter
+        SP = 0xFD, // Initial stack pointer (points to 0x01FF)
+        A = 0x00, // Initial accumulator value
+        X = 0x00, // Initial X register value
+        Y = 0x00, // Initial Y register value
+        P = Flags.Unused | Flags.InterruptDisable, // Initial processor status flags
+    };
 }

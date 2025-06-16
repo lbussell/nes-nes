@@ -3,8 +3,16 @@
 
 namespace NesNes.Core;
 
-public class Console
+public class Console(Cpu cpu, Memory memory)
 {
-    public required Cpu Cpu { get; init; }
-    public void LoadRom(byte[] rom) { }
+    private readonly Cpu _cpu = cpu;
+    private Memory _memory = memory;
+
+    public void LoadRom(byte[] rom)
+    {
+        _cpu.Reset();
+        _memory.LoadRom(rom);
+    }
+
+    public void Start() { }
 }

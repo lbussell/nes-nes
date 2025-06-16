@@ -66,5 +66,11 @@ public static class MemoryRegions
 
     public const ushort ApuIoRegisters = 0x4000;
 
+    public const ushort RomStart = 0x8000;
+    public const ushort RomEnd = 0xFFFF;
+    public const ushort RomSize = RomEnd - RomStart + 1;
+
+    public const ushort ResetVector = 0xFFFC;
+
     public const int TotalSize = 0x10000;
 }

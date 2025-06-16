@@ -19,6 +19,18 @@ public class Cpu
 
     public Registers Registers => _registers;
 
+    /// <summary>
+    /// Reset interrupt - this is called when a new cartridge is loaded or when
+    /// the console is powered on. Registers and flags will be set to their
+    /// initial states, and the reset vector is read in order to reset the
+    /// program counter.
+    /// </summary>
+    public void Reset()
+    {
+        _registers = Registers.Initial;
+        _registers.PC = _memory.Read16(MemoryRegions.ResetVector);
+    }
+
     public void Run()
     {
         while (true)

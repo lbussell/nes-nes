@@ -3,7 +3,7 @@
 
 namespace NesNes.Core;
 
-public class Memory : IMemory
+public class Memory : IMemory, IRomLoader
 {
     private readonly byte[] _internalRam = new byte[MemoryRegions.InternalRamSize];
     private readonly byte[] _ppuRegisters = new byte[MemoryRegions.PpuRegistersSize];
@@ -11,6 +11,26 @@ public class Memory : IMemory
     // This is a placeholder that covers all 64K of memory, until more
     // sophisticated memory mapping/mirroring is implemented.
     private readonly byte[] _memory = new byte[MemoryRegions.TotalSize];
+
+    private readonly byte[] _rom = new byte[MemoryRegions.RomSize];
+
+    public void LoadRom(byte[] rom)
+    {
+        if (rom.Length > MemoryRegions.RomSize)
+        {
+            throw new ArgumentException(
+                $"ROM is too big. Maximum size is {MemoryRegions.RomSize} bytes."
+            );
+        }
+
+        Array.Copy(
+            sourceArray: rom,
+            sourceIndex: 0,
+            destinationArray: _rom,
+            destinationIndex: MemoryRegions.RomStart,
+            length: rom.Length
+        );
+    }
 
     /// <inheritdoc/>
     public byte Read8(ushort address)
