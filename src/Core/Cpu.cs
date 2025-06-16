@@ -251,6 +251,16 @@ public class Cpu
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
 
+        var orA = UseOperand(OrA);
+        opcodes[0x09] = new("ORA", orA, AddressingMode.Immediate, 2);
+        opcodes[0x05] = new("ORA", orA, AddressingMode.ZeroPage, 3);
+        opcodes[0x15] = new("ORA", orA, AddressingMode.ZeroPageX, 4);
+        opcodes[0x0D] = new("ORA", orA, AddressingMode.Absolute, 4);
+        opcodes[0x1D] = new("ORA", orA, AddressingMode.AbsoluteX, 4);
+        opcodes[0x19] = new("ORA", orA, AddressingMode.AbsoluteY, 4);
+        opcodes[0x01] = new("ORA", orA, AddressingMode.IndirectX, 6);
+        opcodes[0x11] = new("ORA", orA, AddressingMode.IndirectY, 5);
+
         opcodes[0x48] = new("PHA", Implicit(() => PushStack(_registers.A)), AddressingMode.Implicit, 3);
 
         var sbc = UseOperand(Sbc);
@@ -608,6 +618,16 @@ public class Cpu
         _memory[address] = result;
         _registers.SetZeroAndNegative(result);
         // TODO: Maybe ignore page cross penalty?
+    }
+
+    /// <summary>
+    /// An inclusive OR is performed, bit by bit, on the accumulator contents
+    /// using the contents of a byte of memory.
+    /// </summary>
+    private void OrA(byte operand)
+    {
+        _registers.A |= operand;
+        _registers.SetZeroAndNegative(_registers.A);
     }
 
     private void Tax()
