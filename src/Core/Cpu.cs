@@ -168,6 +168,8 @@ public class Cpu
         opcodes[0xD6] = new("DEC", UseAddress(Dec), AddressingMode.ZeroPageX, 6);
         opcodes[0xCE] = new("DEC", UseAddress(Dec), AddressingMode.Absolute, 6);
         opcodes[0xDE] = new("DEC", UseAddress(Dec), AddressingMode.AbsoluteX, 7);
+        opcodes[0xCA] = new("DEX", Implicit(() => Dex(ref _registers.X)), AddressingMode.Implicit, 2);
+        opcodes[0x88] = new("DEY", Implicit(() => Dex(ref _registers.Y)), AddressingMode.Implicit, 2);
 
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
@@ -397,6 +399,16 @@ public class Cpu
         var result = (byte)(value - 1);
         _memory[address] = result;
         _registers.SetZeroAndNegative(result);
+    }
+
+    /// <summary>
+    /// Subtracts one from the target register, setting the zero and negative
+    /// flags as appropriate.
+    /// </summary>
+    private void Dex(ref byte target)
+    {
+        target -= 1;
+        _registers.SetZeroAndNegative(target);
     }
 
     /// <summary>
