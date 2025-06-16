@@ -281,6 +281,7 @@ public class Cpu
         opcodes[0x7E] = new("ROR", ror, AddressingMode.AbsoluteX, 7);
 
         opcodes[0x40] = new("RTI", Implicit(Rti), AddressingMode.Implicit, 6);
+        opcodes[0x60] = new("RTS", Implicit(Rts), AddressingMode.Implicit, 6);
 
         var sbc = UseOperand(Sbc);
         opcodes[0xE9] = new("SBC", sbc, AddressingMode.Immediate, 2);
@@ -798,6 +799,17 @@ public class Cpu
     {
         PullP();
         _registers.PC = PullStack16();
+    }
+
+    /// <summary>
+    /// Return from subroutine - RTS is used at the end of a subroutine to
+    /// return to the calling routine. It pulls the program counter (minus one)
+    /// from the stack.
+    /// </summary>
+    private void Rts()
+    {
+        _registers.PC = PullStack16();
+        _registers.PC += 1;
     }
 
     private void Tax()
