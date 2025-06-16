@@ -156,6 +156,14 @@ public class Cpu
         opcodes[0xC1] = new("CMP", UseOperand(Cmp), AddressingMode.IndirectX, 6);
         opcodes[0xD1] = new("CMP", UseOperand(Cmp), AddressingMode.IndirectY, 5);
 
+        opcodes[0xE0] = new("CPX", UseOperand(Cpx), AddressingMode.Immediate, 2);
+        opcodes[0xE4] = new("CPX", UseOperand(Cpx), AddressingMode.ZeroPage, 3);
+        opcodes[0xEC] = new("CPX", UseOperand(Cpx), AddressingMode.Absolute, 4);
+
+        opcodes[0xC0] = new("CPY", UseOperand(Cpy), AddressingMode.Immediate, 2);
+        opcodes[0xC4] = new("CPY", UseOperand(Cpy), AddressingMode.ZeroPage, 3);
+        opcodes[0xCC] = new("CPY", UseOperand(Cpy), AddressingMode.Absolute, 4);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -350,6 +358,28 @@ public class Cpu
         byte result = (byte)(_registers.A - operand);
         _registers.SetZeroAndNegative(result);
         _registers.SetFlag(Flags.Carry, _registers.A >= operand);
+    }
+
+    /// <summary>
+    /// This instruction compares the contents of the X register with another
+    /// memory held value and sets the zero and carry flags as appropriate.
+    /// </summary>
+    private void Cpx(byte operand)
+    {
+        byte result = (byte)(_registers.X - operand);
+        _registers.SetZeroAndNegative(result);
+        _registers.SetFlag(Flags.Carry, _registers.X >= operand);
+    }
+
+    /// <summary>
+    /// This instruction compares the contents of the Y register with another
+    /// memory held value and sets the zero and carry flags as appropriate.
+    /// </summary>
+    private void Cpy(byte operand)
+    {
+        byte result = (byte)(_registers.Y - operand);
+        _registers.SetZeroAndNegative(result);
+        _registers.SetFlag(Flags.Carry, _registers.Y >= operand);
     }
 
     /// <summary>
