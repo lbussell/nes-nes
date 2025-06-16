@@ -83,6 +83,8 @@ public class Cpu
     {
         var opcodes = new Instruction[0x100];
 
+        // csharpier-ignore-start
+
         var adc = UseOperand(Adc);
         opcodes[0x69] = new("ADC", adc, AddressingMode.Immediate, 2);
         opcodes[0x65] = new("ADC", adc, AddressingMode.ZeroPage, 3);
@@ -122,30 +124,10 @@ public class Cpu
         opcodes[0x24] = new("BIT", bit, AddressingMode.ZeroPage, 3);
         opcodes[0x2C] = new("BIT", bit, AddressingMode.Absolute, 4);
 
-        opcodes[0x18] = new(
-            "CLC",
-            Implicit(() => _registers.ClearFlag(Flags.Carry)),
-            AddressingMode.Implicit,
-            2
-        );
-        opcodes[0xD8] = new(
-            "CLD",
-            Implicit(() => _registers.ClearFlag(Flags.DecimalMode)),
-            AddressingMode.Implicit,
-            2
-        );
-        opcodes[0x58] = new(
-            "CLI",
-            Implicit(() => _registers.ClearFlag(Flags.InterruptDisable)),
-            AddressingMode.Implicit,
-            2
-        );
-        opcodes[0xB8] = new(
-            "CLV",
-            Implicit(() => _registers.ClearFlag(Flags.Overflow)),
-            AddressingMode.Implicit,
-            2
-        );
+        opcodes[0x18] = new("CLC", Implicit(() => _registers.ClearFlag(Flags.Carry)), AddressingMode.Implicit, 2);
+        opcodes[0xD8] = new("CLD", Implicit(() => _registers.ClearFlag(Flags.DecimalMode)), AddressingMode.Implicit, 2);
+        opcodes[0x58] = new("CLI", Implicit(() => _registers.ClearFlag(Flags.InterruptDisable)), AddressingMode.Implicit, 2);
+        opcodes[0xB8] = new("CLV", Implicit(() => _registers.ClearFlag(Flags.Overflow)), AddressingMode.Implicit, 2);
 
         opcodes[0xC9] = new("CMP", UseOperand(Cmp), AddressingMode.Immediate, 2);
         opcodes[0xC5] = new("CMP", UseOperand(Cmp), AddressingMode.ZeroPage, 3);
@@ -184,6 +166,8 @@ public class Cpu
         opcodes[0xF6] = new("INC", UseAddress(Inc), AddressingMode.ZeroPageX, 6);
         opcodes[0xEE] = new("INC", UseAddress(Inc), AddressingMode.Absolute, 6);
         opcodes[0xFE] = new("INC", UseAddress(Inc), AddressingMode.AbsoluteX, 7);
+        opcodes[0xE8] = new("INX", Implicit(() => Increment(ref _registers.X)), AddressingMode.Implicit, 2);
+        opcodes[0xC8] = new("INY", Implicit(() => Increment(ref _registers.Y)), AddressingMode.Implicit, 2);
 
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
@@ -222,6 +206,8 @@ public class Cpu
         opcodes[0xF9] = new("SBC", sbc, AddressingMode.AbsoluteY, 4);
         opcodes[0xE1] = new("SBC", sbc, AddressingMode.IndirectX, 6);
         opcodes[0xF1] = new("SBC", sbc, AddressingMode.IndirectY, 5);
+
+        // csharpier-ignore-end
 
         return opcodes;
     }
@@ -444,6 +430,16 @@ public class Cpu
         byte result = (byte)(value + 1);
         _memory[address] = result;
         _registers.SetZeroAndNegative(result);
+    }
+
+    /// <summary>
+    /// Increment the target register, setting the zero and negative flags as
+    /// appropriate.
+    /// </summary>
+    private void Increment(ref byte target)
+    {
+        target += 1;
+        _registers.SetZeroAndNegative(target);
     }
 
     /// <summary>
