@@ -216,10 +216,6 @@ public class Cpu
         opcodes[0x4C] = new("JMP", UseAddress(Jmp), AddressingMode.Absolute, 3);
         opcodes[0x6C] = new("JMP", UseAddress(Jmp), AddressingMode.Indirect, 5);
 
-        opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
-
-        opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
-
         var lda = UseOperand(Lda);
         opcodes[0xA9] = new("LDA", lda, AddressingMode.Immediate, 2);
         opcodes[0xA5] = new("LDA", lda, AddressingMode.ZeroPage, 3);
@@ -244,6 +240,8 @@ public class Cpu
         opcodes[0xAC] = new("LDY", ldy, AddressingMode.Absolute, 4);
         opcodes[0xBC] = new("LDY", ldy, AddressingMode.AbsoluteX, 4);
 
+        opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
+
         var sbc = UseOperand(Sbc);
         opcodes[0xE9] = new("SBC", sbc, AddressingMode.Immediate, 2);
         opcodes[0xE5] = new("SBC", sbc, AddressingMode.ZeroPage, 3);
@@ -253,6 +251,8 @@ public class Cpu
         opcodes[0xF9] = new("SBC", sbc, AddressingMode.AbsoluteY, 4);
         opcodes[0xE1] = new("SBC", sbc, AddressingMode.IndirectX, 6);
         opcodes[0xF1] = new("SBC", sbc, AddressingMode.IndirectY, 5);
+
+        opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         // csharpier-ignore-end
 
