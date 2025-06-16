@@ -293,6 +293,10 @@ public class Cpu
         opcodes[0xE1] = new("SBC", sbc, AddressingMode.IndirectX, 6);
         opcodes[0xF1] = new("SBC", sbc, AddressingMode.IndirectY, 5);
 
+        opcodes[0x38] = new("SEC", Implicit(() => _registers.SetFlag(Flags.Carry)), AddressingMode.Implicit, 2);
+        opcodes[0xF8] = new("SED", Implicit(() => _registers.SetFlag(Flags.DecimalMode)), AddressingMode.Implicit, 2);
+        opcodes[0x78] = new("SEI", Implicit(() => _registers.SetFlag(Flags.InterruptDisable)), AddressingMode.Implicit, 2);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         // csharpier-ignore-end
