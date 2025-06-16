@@ -64,7 +64,8 @@ public class Cpu
                     instruction.Name,
                     instruction.AddressingMode,
                     opcode,
-                    extraBytes);
+                    extraBytes
+                );
 
                 disassembly.Add(disassembledInstruction);
             }
