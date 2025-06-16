@@ -29,7 +29,6 @@ public record CpuTestCase(string Name, CpuState Initial, CpuState Final)
         // Program is laid out like [[address, value], [address, value], ...],
         // so select the second item in each row for the program data.
         var program = Initial.Ram.Select(row => (byte)row[1]).ToArray();
-        var disassembly = cpu.Disassemble(program);
 
         return $"""
             Test: {Name}
