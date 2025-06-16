@@ -32,6 +32,51 @@ public class Cpu
         }
     }
 
+    public IEnumerable<DisassembledInstruction> Disassemble(byte[] program)
+    {
+        var disassembly = new List<DisassembledInstruction>();
+
+        for (int i = 0; i < program.Length; i++)
+        {
+            byte opcode = program[i];
+            Instruction instruction = _instructions[opcode];
+
+            if (instruction.HasValue())
+            {
+                byte[] extraBytes = instruction.AddressingMode switch
+                {
+                    AddressingMode.Implicit => [],
+                    AddressingMode.Immediate => [program[i + 1]],
+                    AddressingMode.ZeroPage => [program[i + 1]],
+                    AddressingMode.ZeroPageX => [program[i + 1]],
+                    AddressingMode.ZeroPageY => [program[i + 1]],
+                    AddressingMode.Relative => [program[i + 1]],
+                    AddressingMode.Absolute => [program[i + 1], program[i + 2]],
+                    AddressingMode.AbsoluteX => [program[i + 1]],
+                    AddressingMode.AbsoluteY => [program[i + 1]],
+                    AddressingMode.Indirect => [program[i + 1], program[i + 2]],
+                    AddressingMode.IndirectX => [program[i + 1]],
+                    AddressingMode.IndirectY => [program[i + 1]],
+                    _ => [],
+                };
+
+                var disassembledInstruction = new DisassembledInstruction(
+                    instruction.Name,
+                    instruction.AddressingMode,
+                    opcode,
+                    extraBytes);
+
+                disassembly.Add(disassembledInstruction);
+            }
+            else
+            {
+                disassembly.Add(DisassembledInstruction.Unknown(opcode));
+            }
+        }
+
+        return disassembly;
+    }
+
     internal void RunSteps(int steps)
     {
         for (var i = 0; i < steps; i += 1)
@@ -82,7 +127,6 @@ public class Cpu
     private Instruction[] InitializeInstructions()
     {
         var opcodes = new Instruction[0x100];
-
         // csharpier-ignore-start
 
         var adc = UseOperand(Adc);

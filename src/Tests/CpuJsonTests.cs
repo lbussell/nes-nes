@@ -94,7 +94,12 @@ public class CpuJsonTests
         catch (Exception e)
         {
             throw new InvalidOperationException(
-                $"Test case '{testCase.Name}' failed: {e.Message}",
+                $"""
+                Test case '{testCase.Name}' failed: {e.Message}
+
+                {testCase}
+
+                """,
                 e
             );
         }
