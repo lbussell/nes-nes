@@ -180,6 +180,11 @@ public class Cpu
         opcodes[0x41] = new("EOR", UseOperand(Eor), AddressingMode.IndirectX, 6);
         opcodes[0x51] = new("EOR", UseOperand(Eor), AddressingMode.IndirectY, 5);
 
+        opcodes[0xE6] = new("INC", UseAddress(Inc), AddressingMode.ZeroPage, 5);
+        opcodes[0xF6] = new("INC", UseAddress(Inc), AddressingMode.ZeroPageX, 6);
+        opcodes[0xEE] = new("INC", UseAddress(Inc), AddressingMode.Absolute, 6);
+        opcodes[0xFE] = new("INC", UseAddress(Inc), AddressingMode.AbsoluteX, 7);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -430,6 +435,18 @@ public class Cpu
     }
 
     /// <summary>
+    /// Increment the value at a specified memory location, setting the zero and
+    /// negative flags as appropriate.
+    /// </summary>
+    private void Inc(ushort address)
+    {
+        byte value = _memory[address];
+        byte result = (byte)(value + 1);
+        _memory[address] = result;
+        _registers.SetZeroAndNegative(result);
+    }
+
+    /// <summary>
     /// A,Z,C,N = A-M-(1-C)
     /// </summary>
     private void Sbc(byte operand)
@@ -590,7 +607,8 @@ public class Cpu
             byte zeroPageAddress = Fetch8();
             ushort targetPointer = Read16ZeroPageWraparound(zeroPageAddress);
             ushort targetAddress = (ushort)(targetPointer + _registers.Y);
-            return new AddressResult(targetAddress, 0);
+            int extraCycles = CalculatePageCrossPenalty(zeroPageAddress, targetAddress);
+            return new AddressResult(targetAddress, extraCycles);
         }
     }
 
