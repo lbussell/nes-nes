@@ -559,6 +559,9 @@ public class Cpu
             return addressResult.ExtraCycles;
         };
 
+    /// <summary>
+    /// Wrapper for instructions that simply operate on an address.
+    /// </summary>
     private InstructionHandler UseAddress(Action<ushort> action) =>
         mode =>
         {
