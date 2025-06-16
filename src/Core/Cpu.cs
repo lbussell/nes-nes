@@ -171,6 +171,15 @@ public class Cpu
         opcodes[0xCA] = new("DEX", Implicit(() => Dex(ref _registers.X)), AddressingMode.Implicit, 2);
         opcodes[0x88] = new("DEY", Implicit(() => Dex(ref _registers.Y)), AddressingMode.Implicit, 2);
 
+        opcodes[0x49] = new("EOR", UseOperand(Eor), AddressingMode.Immediate, 2);
+        opcodes[0x45] = new("EOR", UseOperand(Eor), AddressingMode.ZeroPage, 3);
+        opcodes[0x55] = new("EOR", UseOperand(Eor), AddressingMode.ZeroPageX, 4);
+        opcodes[0x4D] = new("EOR", UseOperand(Eor), AddressingMode.Absolute, 4);
+        opcodes[0x5D] = new("EOR", UseOperand(Eor), AddressingMode.AbsoluteX, 4);
+        opcodes[0x59] = new("EOR", UseOperand(Eor), AddressingMode.AbsoluteY, 4);
+        opcodes[0x41] = new("EOR", UseOperand(Eor), AddressingMode.IndirectX, 6);
+        opcodes[0x51] = new("EOR", UseOperand(Eor), AddressingMode.IndirectY, 5);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -409,6 +418,15 @@ public class Cpu
     {
         target -= 1;
         _registers.SetZeroAndNegative(target);
+    }
+
+    /// <summary>
+    /// Exclusive OR between the accumulator and the operand.
+    /// </summary>
+    private void Eor(byte operand)
+    {
+        _registers.A ^= operand;
+        _registers.SetZeroAndNegative(_registers.A);
     }
 
     /// <summary>
