@@ -297,17 +297,6 @@ public class Cpu
     private int Bvs(AddressingMode mode) => BranchIf(Flags.Overflow, true, mode);
 
     /// <summary>
-    /// This instruction compares the contents of the accumulator with another
-    /// memory held value and sets the zero and carry flags as appropriate.
-    /// </summary>
-    private void Cmp(byte operand)
-    {
-        byte result = (byte)(_registers.A - operand);
-        _registers.SetZeroAndNegative(result);
-        _registers.SetFlag(Flags.Carry, _registers.A >= operand);
-    }
-
-    /// <summary>
     /// Branch if the given flag matches the expected value. Takes one extra
     /// cycle if the branch is taken, and 1 additional cycle on top of that if a
     /// page boundary is crossed.
@@ -350,6 +339,17 @@ public class Cpu
 
         // Set the overflow flag to the 6th bit of the operand.
         _registers.SetFlag(Flags.Overflow, (operand & 0b_0100_0000) != 0);
+    }
+
+    /// <summary>
+    /// This instruction compares the contents of the accumulator with another
+    /// memory held value and sets the zero and carry flags as appropriate.
+    /// </summary>
+    private void Cmp(byte operand)
+    {
+        byte result = (byte)(_registers.A - operand);
+        _registers.SetZeroAndNegative(result);
+        _registers.SetFlag(Flags.Carry, _registers.A >= operand);
     }
 
     /// <summary>
