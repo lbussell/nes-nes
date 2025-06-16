@@ -164,6 +164,11 @@ public class Cpu
         opcodes[0xC4] = new("CPY", UseOperand(Cpy), AddressingMode.ZeroPage, 3);
         opcodes[0xCC] = new("CPY", UseOperand(Cpy), AddressingMode.Absolute, 4);
 
+        opcodes[0xC6] = new("DEC", UseAddress(Dec), AddressingMode.ZeroPage, 5);
+        opcodes[0xD6] = new("DEC", UseAddress(Dec), AddressingMode.ZeroPageX, 6);
+        opcodes[0xCE] = new("DEC", UseAddress(Dec), AddressingMode.Absolute, 6);
+        opcodes[0xDE] = new("DEC", UseAddress(Dec), AddressingMode.AbsoluteX, 7);
+
         opcodes[0xAA] = new("TAX", Implicit(Tax), AddressingMode.Implicit, 2);
 
         opcodes[0xEA] = new("NOP", Implicit(() => { }), AddressingMode.Implicit, 2);
@@ -383,6 +388,18 @@ public class Cpu
     }
 
     /// <summary>
+    /// Subtracts one from the value held at a specified memory location setting
+    /// the zero and negative flags as appropriate.
+    /// </summary>
+    private void Dec(ushort address)
+    {
+        var value = _memory[address];
+        var result = (byte)(value - 1);
+        _memory[address] = result;
+        _registers.SetZeroAndNegative(result);
+    }
+
+    /// <summary>
     /// A,Z,C,N = A-M-(1-C)
     /// </summary>
     private void Sbc(byte operand)
@@ -440,6 +457,14 @@ public class Cpu
             var addressResult = GetAddress(mode);
             var operand = _memory.Read8(addressResult.Address);
             action(operand);
+            return addressResult.ExtraCycles;
+        };
+
+    private InstructionHandler UseAddress(Action<ushort> action) =>
+        mode =>
+        {
+            var addressResult = GetAddress(mode);
+            action(addressResult.Address);
             return addressResult.ExtraCycles;
         };
 
