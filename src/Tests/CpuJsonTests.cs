@@ -89,7 +89,7 @@ public class CpuJsonTests
 
         try
         {
-            cpu.RunSteps(1);
+            cpu.Step();
         }
         catch (Exception e)
         {
