@@ -3,17 +3,19 @@
 
 namespace NesNes.Core;
 
+public delegate void CpuCallback(ushort PC, Registers registers);
+
 public class Cpu
 {
     private readonly Instruction[] _instructions;
     private readonly IMemory _memory;
     private Registers _registers;
-    private readonly Action<Cpu, IMemory>? _onInstructionCompleted;
+    private readonly CpuCallback? _onInstructionCompleted;
 
     public Cpu(
         Registers initialRegisters,
         IMemory memory,
-        Action<Cpu, IMemory>? onInstructionCompleted = null
+        CpuCallback? onInstructionCompleted = null
     )
     {
         _registers = initialRegisters;
@@ -48,6 +50,8 @@ public class Cpu
     /// </exception>
     public int Step()
     {
+        var oldPC = _registers.PC;
+
         // Load next instruction
         byte opcode = Fetch8();
 
@@ -58,6 +62,12 @@ public class Cpu
             throw new InvalidOperationException(
                 $"Unknown opcode: {opcode:X2} at PC: {_registers.PC - 1:X4}"
             );
+        }
+
+        // Run callback function if it was provided
+        if (_onInstructionCompleted is not null)
+        {
+            _onInstructionCompleted(oldPC, _registers);
         }
 
         // Return the number of cycles the instruction took to execute

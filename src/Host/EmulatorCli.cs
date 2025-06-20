@@ -16,7 +16,7 @@ internal class EmulatorCli
     public async Task Start(string rom)
     {
         var romData = await File.ReadAllBytesAsync(rom);
-        var cartridge = new Cartridge(romData);
+        var cartridge = CartridgeData.FromData(romData);
         WriteLine(
             $"""
             Loaded ROM: {Path.GetFileName(rom)}

@@ -14,16 +14,16 @@ public class Console(Cpu cpu, Memory memory)
     /// <summary>
     /// Create a new instance of <see cref="Console"/>.
     /// </summary>
-    public static Console Create(Action<Cpu, IMemory>? onCpuInstructionCompleted = null)
+    public static Console Create(CpuCallback? onCpuInstructionCompleted = null)
     {
         var memory = new Memory();
         var cpu = new Cpu(Registers.Initial, memory, onCpuInstructionCompleted);
         return new Console(cpu, memory);
     }
 
-    public void InsertCartridge(Cartridge rom)
+    public void InsertCartridge(CartridgeData cart)
     {
-        _memory.LoadRom(rom.Data);
+        _memory.LoadRom(cart);
         Reset();
     }
 

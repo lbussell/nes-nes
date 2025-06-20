@@ -13,7 +13,7 @@ namespace NesNes.Host;
 internal class EmulatorGame : Game
 {
     private readonly GraphicsDeviceManager _graphics;
-    private readonly Cartridge _cartridge;
+    private readonly CartridgeData _cartridge;
     private readonly Console _console;
     private readonly StringBuilder _log = new();
 
@@ -22,7 +22,7 @@ internal class EmulatorGame : Game
 
     private int _cpuCycles = 0;
 
-    public EmulatorGame(Cartridge cartridge)
+    public EmulatorGame(CartridgeData cartridge)
     {
         // MonoGame stuff
         _graphics = new GraphicsDeviceManager(this);
@@ -79,7 +79,7 @@ internal class EmulatorGame : Game
     /// <summary>
     /// Prints the current CPU state.
     /// </summary>
-    private void Trace(Cpu cpu, IMemory memory)
+    private void Trace(ushort PC, Registers registers)
     {
         /**
 
@@ -94,8 +94,6 @@ internal class EmulatorGame : Game
 
         */
 
-        // var registers = cpu.Registers;
-
-        // _log.AppendLine();
+        System.Console.WriteLine($"{PC:X4}  {registers}  CYC:{_cpuCycles}");
     }
 }

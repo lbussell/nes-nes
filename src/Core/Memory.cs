@@ -14,7 +14,7 @@ public class Memory : IMemory
 
     private readonly byte[] _rom = new byte[2 * MemoryRegions.RomPageSize];
 
-    public void LoadRom(ReadOnlySpan<byte> rom)
+    public void LoadRom(CartridgeData cart)
     {
         // Temporary hacky hack.
         //
@@ -26,8 +26,8 @@ public class Memory : IMemory
         // emulated 6502's memory map. You can make an iNES parser once you
         // start trying to actually run Concentration Room or Donkey Kong.
 
-        // Get 0x4000 bytes starting at 0x0010
-        var romPage = rom.Slice(0x0010, MemoryRegions.RomPageSize);
+        // cart.PrgRom has already taken into account the header offset (0x10)
+        var romData = cart.PrgRom[..CartridgeData.PrgRomPageSize];
 
         // Map into both $8000-$BFFF and $C000-$FFFF
         var internalRomSpan = _rom.AsSpan();
@@ -38,8 +38,8 @@ public class Memory : IMemory
         );
 
         // Copy the ROM data
-        romPage.CopyTo(internalRomPage1);
-        romPage.CopyTo(internalRomPage2);
+        romData.CopyTo(internalRomPage1);
+        romData.CopyTo(internalRomPage2);
     }
 
     /// <inheritdoc/>

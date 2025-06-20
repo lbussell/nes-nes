@@ -54,10 +54,7 @@ public record struct Registers
 
     public override readonly string ToString()
     {
-        return $"""
-            PC   A  X  Y  NV1BDIZC SP
-            {PC:X4} {A:X2} {X:X2} {Y:X2} {(byte)P:B8} {SP:X2}
-            """;
+        return $"A:{A:X2} X:{X:X2} Y:{Y:X2} P:{(byte)P:X2} SP:{SP:X2} PC:{PC:X4}";
     }
 
     public static readonly Registers Initial = new()
