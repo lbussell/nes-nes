@@ -8,11 +8,17 @@ public class Cpu
     private readonly Instruction[] _instructions;
     private readonly IMemory _memory;
     private Registers _registers;
+    private readonly Action<Cpu, IMemory>? _onInstructionCompleted;
 
-    public Cpu(Registers initialRegisters, IMemory memory)
+    public Cpu(
+        Registers initialRegisters,
+        IMemory memory,
+        Action<Cpu, IMemory>? onInstructionCompleted = null
+    )
     {
         _registers = initialRegisters;
         _memory = memory;
+        _onInstructionCompleted = onInstructionCompleted;
 
         _instructions = InitializeInstructions();
     }
@@ -20,10 +26,10 @@ public class Cpu
     public Registers Registers => _registers;
 
     /// <summary>
-    /// Reset interrupt - this is called when a new cartridge is loaded or when
-    /// the console is powered on. Registers and flags will be set to their
-    /// initial states, and the reset vector is read in order to reset the
-    /// program counter.
+    /// Sets registers and flags to their initial states. The reset vector is
+    /// read from memory in order to reset the program counter to the beginning
+    /// of the program. Call this after a new cartridge is loaded or when the
+    /// console is powered on.
     /// </summary>
     public void Reset()
     {
@@ -31,74 +37,41 @@ public class Cpu
         _registers.PC = _memory.Read16(MemoryRegions.ResetVector);
     }
 
-    public void Run()
+    /// <summary>
+    /// Executes a single CPU instruction.
+    /// </summary>
+    /// <returns>
+    /// The number of CPU cycles elapsed while executing the instruction.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// If the CPU tries to execute an illegal opcode.
+    /// </exception>
+    public int Step()
     {
-        while (true)
+        // Load next instruction
+        byte opcode = Fetch8();
+
+        // Execute instruction
+        var instruction = _instructions[opcode];
+        if (!instruction.HasValue())
         {
-            var instructionResult = Step();
-
-            if (instructionResult == InstructionResult.StopExecution)
-            {
-                break;
-            }
-        }
-    }
-
-    public IEnumerable<DisassembledInstruction> Disassemble(byte[] program)
-    {
-        var disassembly = new List<DisassembledInstruction>();
-
-        for (int i = 0; i < program.Length; i++)
-        {
-            byte opcode = program[i];
-            Instruction instruction = _instructions[opcode];
-
-            if (instruction.HasValue())
-            {
-                byte[] extraBytes = instruction.AddressingMode switch
-                {
-                    AddressingMode.Implicit => [],
-                    AddressingMode.Immediate => [program[i + 1]],
-                    AddressingMode.ZeroPage => [program[i + 1]],
-                    AddressingMode.ZeroPageX => [program[i + 1]],
-                    AddressingMode.ZeroPageY => [program[i + 1]],
-                    AddressingMode.Relative => [program[i + 1]],
-                    AddressingMode.Absolute => [program[i + 1], program[i + 2]],
-                    AddressingMode.AbsoluteX => [program[i + 1]],
-                    AddressingMode.AbsoluteY => [program[i + 1]],
-                    AddressingMode.Indirect => [program[i + 1], program[i + 2]],
-                    AddressingMode.IndirectX => [program[i + 1]],
-                    AddressingMode.IndirectY => [program[i + 1]],
-                    _ => [],
-                };
-
-                var disassembledInstruction = new DisassembledInstruction(
-                    instruction.Name,
-                    instruction.AddressingMode,
-                    opcode,
-                    extraBytes
-                );
-
-                disassembly.Add(disassembledInstruction);
-            }
-            else
-            {
-                disassembly.Add(DisassembledInstruction.Unknown(opcode));
-            }
+            throw new InvalidOperationException(
+                $"Unknown opcode: {opcode:X2} at PC: {_registers.PC - 1:X4}"
+            );
         }
 
-        return disassembly;
+        // Return the number of cycles the instruction took to execute
+        var cyclesElapsed = instruction.Execute();
+        return cyclesElapsed;
     }
 
-    internal void RunSteps(int steps)
-    {
-        for (var i = 0; i < steps; i += 1)
-        {
-            _ = Step();
-        }
-    }
-
-    internal List<byte> GetImplementedOpcodes()
+    /// <summary>
+    /// Gets the list of all opcodes supported by the CPU.
+    /// </summary>
+    /// <returns>
+    /// List of bytes where each byte represents a supported opcode.
+    /// </returns>
+    public List<byte> GetSupportedOpcodes()
     {
         var implementedOpcodes = new List<byte>();
 
@@ -111,28 +84,6 @@ public class Cpu
         }
 
         return implementedOpcodes;
-    }
-
-    private InstructionResult Step()
-    {
-        // Load next instruction
-        byte opcode = Fetch8();
-        if (opcode == 0x00)
-        {
-            // BRK (break) instruction, stop execution
-            return InstructionResult.StopExecution;
-        }
-
-        var instruction = _instructions[opcode];
-        if (!instruction.HasValue())
-        {
-            throw new InvalidOperationException(
-                $"Unknown opcode: {opcode:X2} at PC: {_registers.PC - 1:X4}"
-            );
-        }
-
-        var cycles = instruction.Execute();
-        return InstructionResult.Ok;
     }
 
     #region Instructions
@@ -946,6 +897,19 @@ public class Cpu
             return 0;
         };
 
+    /// <summary>
+    /// Get the address to be used by an opcode based on the addressing mode.
+    /// </summary>
+    /// <param name="mode">
+    /// The addressing mode that will be used to fetch the address.
+    /// </param>
+    /// <returns>Data structure representing the address that was calculated /
+    /// fetched and any extra CPU cycles that were incurred.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="AddressingMode.Implicit"/> is used, because it
+    /// never has an associated address to fetch or calculate.
+    /// </exception>
     private AddressResult GetAddress(AddressingMode mode)
     {
         return mode switch
@@ -1061,6 +1025,14 @@ public class Cpu
         return nextWord;
     }
 
+    /// <summary>
+    /// Determines the number of extra cycles incurred when crossing pages from
+    /// <c>originalAddress</c> to <c>newAddress</c>.
+    /// </summary>
+    /// <returns>
+    /// The number of extra cycles incurred, if any. Returns zero if a page
+    /// boundary was not crossed.
+    /// </returns>
     private static int CalculatePageCrossPenalty(ushort originalAddress, ushort newAddress)
     {
         if ((originalAddress & 0xFF00) != (newAddress & 0xFF00))
@@ -1071,11 +1043,10 @@ public class Cpu
         return 0;
     }
 
+    /// <summary>
+    /// The result of calculating an address to be used by a CPU opcode. Some
+    /// addressing modes incur extra CPU cycles to fetch or calculate the
+    /// address, which is represented by <c>ExtraCycles</c>.
+    /// </summary>
     private readonly record struct AddressResult(ushort Address, int ExtraCycles);
-
-    private enum InstructionResult
-    {
-        StopExecution,
-        Ok,
-    }
 }

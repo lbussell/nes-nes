@@ -5,14 +5,41 @@ namespace NesNes.Core;
 
 public class Console(Cpu cpu, Memory memory)
 {
-    private readonly Cpu _cpu = cpu;
-    private Memory _memory = memory;
+    public const decimal CpuCyclesPerFrame = 29780.5m;
+    public const decimal CpuCyclesPerScanLine = 113.667m;
 
-    public void LoadRom(byte[] rom)
+    private readonly Cpu _cpu = cpu;
+    private readonly Memory _memory = memory;
+
+    /// <summary>
+    /// Create a new instance of <see cref="Console"/>.
+    /// </summary>
+    public static Console Create(Action<Cpu, IMemory>? onCpuInstructionCompleted = null)
     {
-        _cpu.Reset();
-        _memory.LoadRom(rom);
+        var memory = new Memory();
+        var cpu = new Cpu(Registers.Initial, memory, onCpuInstructionCompleted);
+        return new Console(cpu, memory);
     }
 
-    public void Start() { }
+    public void InsertCartridge(Cartridge rom)
+    {
+        _memory.LoadRom(rom.Data);
+        Reset();
+    }
+
+    public void Reset()
+    {
+        _cpu.Reset();
+    }
+
+    /// <summary>
+    /// Executes one CPU instruction.
+    /// </summary>
+    /// <returns>
+    /// The number of CPU cycles elapsed. Most instructions take 2-7 cycles.
+    /// </returns>
+    public int StepCpu()
+    {
+        return _cpu.Step();
+    }
 }

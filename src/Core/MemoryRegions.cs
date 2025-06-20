@@ -31,7 +31,9 @@ namespace NesNes.Core;
  * ├─────────────┼───────┼────────────────────────────────────────────────┤
  * │ $6000-$7FFF │ $2000 │ Usually cartridge RAM, when present.           │
  * ├─────────────┼───────┼────────────────────────────────────────────────┤
- * │ $8000-$FFFF │ $8000 │ Usually cartridge ROM and mapper registers.    │
+ * │ $8000-$BFFF │ $4000 │                                                │
+ * ├─────────────┼───────┤ ROM pages                                      │
+ * │ $C000-$FFFF │ $4000 │                                                │
  * └─────────────┴───────┴────────────────────────────────────────────────┘
  */
 
@@ -66,9 +68,10 @@ public static class MemoryRegions
 
     public const ushort ApuIoRegisters = 0x4000;
 
-    public const ushort RomStart = 0x8000;
+    public const ushort RomPage1 = 0x8000;
+    public const ushort RomPage2 = 0xC000;
     public const ushort RomEnd = 0xFFFF;
-    public const ushort RomSize = RomEnd - RomStart + 1;
+    public const ushort RomPageSize = 0x4000;
 
     public const ushort ResetVector = 0xFFFC;
 

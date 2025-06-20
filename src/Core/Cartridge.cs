@@ -14,6 +14,8 @@ public record Cartridge
 {
     private byte[] _rom;
 
+    public ReadOnlySpan<byte> Data => _rom;
+
     /// <summary>
     /// Number of 16KB ROM banks (PRG ROM)
     /// </summary>

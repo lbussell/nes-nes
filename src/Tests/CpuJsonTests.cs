@@ -28,7 +28,7 @@ public class CpuJsonTests
         }
 
         var opcodes = new Cpu(new Registers(), new DictionaryMemory())
-            .GetImplementedOpcodes()
+            .GetSupportedOpcodes()
             .Select(o => o.ToString("X2"));
 
         var jsonOpcodes = Directory

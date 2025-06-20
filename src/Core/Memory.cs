@@ -3,7 +3,7 @@
 
 namespace NesNes.Core;
 
-public class Memory : IMemory, IRomLoader
+public class Memory : IMemory
 {
     private readonly byte[] _internalRam = new byte[MemoryRegions.InternalRamSize];
     private readonly byte[] _ppuRegisters = new byte[MemoryRegions.PpuRegistersSize];
@@ -12,24 +12,34 @@ public class Memory : IMemory, IRomLoader
     // sophisticated memory mapping/mirroring is implemented.
     private readonly byte[] _memory = new byte[MemoryRegions.TotalSize];
 
-    private readonly byte[] _rom = new byte[MemoryRegions.RomSize];
+    private readonly byte[] _rom = new byte[2 * MemoryRegions.RomPageSize];
 
-    public void LoadRom(byte[] rom)
+    public void LoadRom(ReadOnlySpan<byte> rom)
     {
-        if (rom.Length > MemoryRegions.RomSize)
-        {
-            throw new ArgumentException(
-                $"ROM is too big. Maximum size is {MemoryRegions.RomSize} bytes."
-            );
-        }
+        // Temporary hacky hack.
+        //
+        // See this comment on GitHub for more details:
+        // https://github.com/PyAndy/Py3NES/issues/1#issuecomment-224071286
+        //
+        // For now, you can load 0x4000 bytes starting at offset 0x0010, and
+        // map that as ROM into both $8000-$BFFF and $C000-$FFFF of the
+        // emulated 6502's memory map. You can make an iNES parser once you
+        // start trying to actually run Concentration Room or Donkey Kong.
 
-        Array.Copy(
-            sourceArray: rom,
-            sourceIndex: 0,
-            destinationArray: _rom,
-            destinationIndex: MemoryRegions.RomStart,
-            length: rom.Length
+        // Get 0x4000 bytes starting at 0x0010
+        var romPage = rom.Slice(0x0010, MemoryRegions.RomPageSize);
+
+        // Map into both $8000-$BFFF and $C000-$FFFF
+        var internalRomSpan = _rom.AsSpan();
+        var internalRomPage1 = internalRomSpan.Slice(0, MemoryRegions.RomPageSize);
+        var internalRomPage2 = internalRomSpan.Slice(
+            MemoryRegions.RomPageSize,
+            MemoryRegions.RomPageSize
         );
+
+        // Copy the ROM data
+        romPage.CopyTo(internalRomPage1);
+        romPage.CopyTo(internalRomPage2);
     }
 
     /// <inheritdoc/>
@@ -62,6 +72,11 @@ public class Memory : IMemory, IRomLoader
             return ref _ppuRegisters[
                 (address - MemoryRegions.PpuRegisters) % MemoryRegions.PpuRegistersSize
             ];
+        }
+
+        if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
+        {
+            return ref _rom[address - MemoryRegions.RomPage1];
         }
 
         return ref _memory[address];
