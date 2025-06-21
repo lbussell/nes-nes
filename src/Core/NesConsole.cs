@@ -3,7 +3,7 @@
 
 namespace NesNes.Core;
 
-public class Console(Cpu cpu, Memory memory)
+public class NesConsole(Cpu cpu, Memory memory)
 {
     public const decimal CpuCyclesPerFrame = 29780.5m;
     public const decimal CpuCyclesPerScanLine = 113.667m;
@@ -12,13 +12,14 @@ public class Console(Cpu cpu, Memory memory)
     private readonly Memory _memory = memory;
 
     /// <summary>
-    /// Create a new instance of <see cref="Console"/>.
+    /// Create a new instance of <see cref="NesConsole"/>.
     /// </summary>
-    public static Console Create(CpuCallback? onCpuInstructionCompleted = null)
+    public static NesConsole Create(CpuCallback? onCpuInstructionCompleted = null)
     {
         var memory = new Memory();
-        var cpu = new Cpu(Registers.Initial, memory, onCpuInstructionCompleted);
-        return new Console(cpu, memory);
+        var registers = Registers.Initial;
+        var cpu = new Cpu(registers, memory, onCpuInstructionCompleted);
+        return new NesConsole(cpu, memory);
     }
 
     public void InsertCartridge(CartridgeData cart)

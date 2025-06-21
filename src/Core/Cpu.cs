@@ -12,20 +12,21 @@ public class Cpu
     private Registers _registers;
     private readonly CpuCallback? _onInstructionCompleted;
 
-    public Cpu(
-        Registers initialRegisters,
-        IMemory memory,
-        CpuCallback? onInstructionCompleted = null
-    )
+    public Cpu(Registers registers, IMemory memory, CpuCallback? onInstructionCompleted = null)
     {
-        _registers = initialRegisters;
+        _registers = registers;
         _memory = memory;
         _onInstructionCompleted = onInstructionCompleted;
 
         _instructions = InitializeInstructions();
     }
 
-    public Registers Registers => _registers;
+    public Registers Registers
+    {
+        get => _registers;
+        // Internal set only for testing purposes.
+        internal set => _registers = value;
+    }
 
     /// <summary>
     /// Sets registers and flags to their initial states. The reset vector is

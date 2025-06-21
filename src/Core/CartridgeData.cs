@@ -51,7 +51,7 @@ public record CartridgeData
     /// <summary>
     /// Creates a new <see cref="CartridgeData"/> instance from raw ROM data.
     /// </summary>
-    public static CartridgeData FromData(ReadOnlySpan<byte> cartridgeData)
+    public static CartridgeData FromBytes(ReadOnlySpan<byte> cartridgeData)
     {
         var headerData = cartridgeData[..CartridgeHeader.Size];
         var header = new CartridgeHeader(headerData);

@@ -6,7 +6,6 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using NesNes.Core;
-using Console = NesNes.Core.Console;
 
 namespace NesNes.Host;
 
@@ -14,7 +13,7 @@ internal class EmulatorGame : Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private readonly CartridgeData _cartridge;
-    private readonly Console _console;
+    private readonly NesConsole _console;
     private readonly StringBuilder _log = new();
 
     private SpriteBatch? _spriteBatch;
@@ -31,7 +30,7 @@ internal class EmulatorGame : Game
 
         // NesNes stuff
         _cartridge = cartridge;
-        _console = Console.Create(Trace);
+        _console = NesConsole.Create(Trace);
     }
 
     protected override void Initialize()

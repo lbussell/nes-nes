@@ -57,13 +57,23 @@ public record struct Registers
         return $"A:{A:X2} X:{X:X2} Y:{Y:X2} P:{(byte)P:X2} SP:{SP:X2} PC:{PC:X4}";
     }
 
-    public static readonly Registers Initial = new()
+    public void Reset()
     {
-        PC = 0xC000, // Initial program counter
-        SP = 0xFD, // Initial stack pointer (points to 0x01FF)
-        A = 0x00, // Initial accumulator value
-        X = 0x00, // Initial X register value
-        Y = 0x00, // Initial Y register value
-        P = Flags.Unused | Flags.InterruptDisable, // Initial processor status flags
-    };
+        PC = 0xC000;
+        SP = 0xFD;
+        A = 0x00;
+        X = 0x00;
+        Y = 0x00;
+        P = Flags.Unused | Flags.InterruptDisable;
+    }
+
+    public static Registers Initial
+    {
+        get
+        {
+            var registers = new Registers();
+            registers.Reset();
+            return registers;
+        }
+    }
 }
