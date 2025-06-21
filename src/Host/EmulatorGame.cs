@@ -19,23 +19,46 @@ internal class EmulatorGame : Game
     private SpriteBatch? _spriteBatch;
     private SpriteFont? _font;
 
-    private int _cpuCycles = 0;
+    // This is the raw display data that the PPU renders to. Whenever this
+    // class decides to render the display, it copies this buffer to the
+    // _display texture. This could happen whenever - every pixel, scanline, or
+    // frame.
+    private Color[] _frameBuffer = new Color[Ppu.DisplayWidth * Ppu.DisplayHeight];
+
+    // This is the texture that the display will be rendered to.
+    private RenderTarget2D? _display;
+
+    // Holds the destination for rendering the display to the viewport. The
+    // game screen will be scaled to fit whatever size this rectangle is.
+    private Rectangle _renderDestination;
 
     public EmulatorGame(CartridgeData cartridge)
     {
         // MonoGame stuff
-        _graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
+
+        // Display stuff
+        _graphics = new GraphicsDeviceManager(this);
         IsMouseVisible = true;
+        Window.AllowUserResizing = true;
+        Window.ClientSizeChanged += OnClientSizeChanged;
 
         // NesNes stuff
         _cartridge = cartridge;
-        _console = NesConsole.Create(Trace);
+        _console = NesConsole.Create(DrawPixel);
     }
 
     protected override void Initialize()
     {
+        _display = new RenderTarget2D(
+            _graphics.GraphicsDevice,
+            Ppu.DisplayWidth,
+            Ppu.DisplayHeight
+        );
+        UpdateRenderDestination();
+
         _console.InsertCartridge(_cartridge);
+
         base.Initialize();
     }
 
@@ -55,44 +78,104 @@ internal class EmulatorGame : Game
             Exit();
         }
 
-        var elapsedCycles = _console.StepCpu();
-        _cpuCycles += elapsedCycles;
+        for (int i = 0; i < Ppu.Scanlines; i += 1)
+        {
+            _console.StepScanline();
+        }
 
         base.Update(gameTime);
     }
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        if (_spriteBatch is null || _display is null)
+        {
+            return;
+        }
 
-        // TODO: Add your drawing code here
-        _spriteBatch?.Begin();
+        // Render all game visuals to the display.
+        GraphicsDevice.SetRenderTarget(_display);
 
-        _spriteBatch?.DrawString(_font, _cpuCycles.ToString(), new Vector2(10, 10), Color.White);
+        _display.SetData(_frameBuffer);
 
-        _spriteBatch?.End();
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        _spriteBatch.DrawString(
+            _font,
+            _console.CpuCycles.ToString(),
+            new Vector2(0, 0),
+            Color.White
+        );
+        _spriteBatch.End();
+
+        // Stop rendering to the display target. Start rendering to the
+        // viewport instead.
+        GraphicsDevice.SetRenderTarget(null);
+
+        // TODO: Add different options for texture filtering. PointClamp is
+        // just linear filtering.
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+        // Only draw the display to the viewport, but using the render
+        // destination rectangle to scale the display.
+        _spriteBatch.Draw(_display, _renderDestination, Color.White);
+        _spriteBatch.End();
 
         base.Draw(gameTime);
     }
 
-    /// <summary>
-    /// Prints the current CPU state.
-    /// </summary>
-    private void Trace(ushort PC, Registers registers)
+    private void DrawPixel(ushort x, ushort y, byte r, byte g, byte b)
     {
-        /**
+        // Convert the pixel coordinates to a 1D index in the frame buffer.
+        int index = y * Ppu.DisplayWidth + x;
 
-        TODO: Trace CPU state. Must match the following format precisely:
+        if (index < 0 || index >= _frameBuffer.Length)
+        {
+            // If the index is out of bounds, we ignore it.
+            return;
+        }
 
-        C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0, 21 CYC:7
-        C5F5  A2 00     LDX #$00                        A:00 X:00 Y:00 P:24 SP:FD PPU:  0, 30 CYC:10
-        C5F7  86 00     STX $00 = 00                    A:00 X:00 Y:00 P:26 SP:FD PPU:  0, 36 CYC:12
-        C5F9  86 10     STX $10 = 00                    A:00 X:00 Y:00 P:26 SP:FD PPU:  0, 45 CYC:15
-        C5FB  86 11     STX $11 = 00                    A:00 X:00 Y:00 P:26 SP:FD PPU:  0, 54 CYC:18
-        ...
+        _frameBuffer[index] = new Color(r, g, b);
+    }
 
-        */
+    /// <summary>
+    /// This method is called whenever the window is resized by the user.
+    /// </summary>
+    private void OnClientSizeChanged(object? _, EventArgs __)
+    {
+        // Ensure that we don't get any weird divide by zero errors.
+        if (_display is not null && Window.ClientBounds.Width > 0 && Window.ClientBounds.Height > 0)
+        {
+            UpdateRenderDestination();
+        }
+    }
 
-        System.Console.WriteLine($"{PC:X4}  {registers}  CYC:{_cpuCycles}");
+    /// <summary>
+    /// Updates the render destination rectangle based on the current viewport
+    /// size. This sets the render destination's size to be as large as possible
+    /// in the viewport.
+    /// </summary>
+    private void UpdateRenderDestination()
+    {
+        if (_display is null)
+        {
+            return;
+        }
+
+        Point viewportSize = GraphicsDevice.Viewport.Bounds.Size;
+
+        float scaleY = viewportSize.Y / (float)_display.Height;
+
+        // Uncomment to stretch to fill width of viewport.
+        // TODO: Add option to stretch instead of maintaining aspect ratio.
+        // float scaleX = viewportSize.X / (float)_display.Width;
+
+        // Keep aspect ratio
+        float scaleX = scaleY;
+
+        _renderDestination.Width = (int)(_display.Width * scaleX);
+        _renderDestination.Height = (int)(_display.Height * scaleY);
+
+        _renderDestination.X = (viewportSize.X - _renderDestination.Width) / 2;
+        _renderDestination.Y = (viewportSize.Y - _renderDestination.Height) / 2;
     }
 }
