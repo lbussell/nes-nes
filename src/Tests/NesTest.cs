@@ -70,7 +70,8 @@ public class NesTest
         // Construct the console
         var memory = new Memory();
         var cpu = new Cpu(Registers.Initial, memory, Trace);
-        var console = new NesConsole(cpu, memory);
+        var ppu = new Ppu();
+        var console = new NesConsole(cpu, ppu, memory);
 
         var cartridge = CartridgeData.FromBytes(nesTestRom);
         console.InsertCartridge(cartridge);

@@ -3,12 +3,13 @@
 
 namespace NesNes.Core;
 
-public class NesConsole(Cpu cpu, Memory memory)
+public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
 {
     public const decimal CpuCyclesPerFrame = 29780.5m;
     public const decimal CpuCyclesPerScanLine = 113.667m;
 
     private readonly Cpu _cpu = cpu;
+    private readonly Ppu _ppu = ppu;
     private readonly Memory _memory = memory;
 
     /// <summary>
@@ -19,7 +20,8 @@ public class NesConsole(Cpu cpu, Memory memory)
         var memory = new Memory();
         var registers = Registers.Initial;
         var cpu = new Cpu(registers, memory, onCpuInstructionCompleted);
-        return new NesConsole(cpu, memory);
+        var ppu = new Ppu();
+        return new NesConsole(cpu, ppu, memory);
     }
 
     public void InsertCartridge(CartridgeData cart)

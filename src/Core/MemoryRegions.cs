@@ -63,10 +63,72 @@ public static class MemoryRegions
     /// every 8 bytes up to <see cref="PpuRegistersEnd"/> .
     /// </summary>
     public const ushort PpuRegisters = 0x2000;
+
+    /// <summary>
+    /// Bits: VPHB SINN
+    /// - V: NMI Enable
+    /// - P: PPU master/slave
+    /// - H: Sprite height
+    /// - B: Background tile select
+    /// - S: Sprite tile select
+    /// - I: Increment mode
+    /// - N/NN: Nametable select / X and Y scroll bit 8 (NN)
+    /// </summary>
+    public const ushort PpuCtrl = 0x2000;
+
+    /// <summary>
+    /// Bits: BGRs bMmG
+    /// - BGR: Background color
+    /// - s: Sprite enable
+    /// - b: Background enable
+    /// - M: Sprite left column enable
+    /// - m: Background left column enable
+    /// - G: Grayscale mode
+    /// </summary>
+    public const ushort PpuMask = 0x2001;
+
+    /// <summary>
+    /// Bits: VSO- ----
+    /// - V: vblank
+    /// - S: sprite 0 hit
+    /// - O: sprite overflow
+    /// </summary>
+    /// <remarks>
+    /// Read resets write pair for $2005/$2006.
+    /// </remarks>
+    public const ushort PpuStatus = 0x2002;
+
+    /// <summary>
+    /// OAM read/write address.
+    /// </summary>
+    public const ushort OamAddress = 0x2003;
+
+    /// <summary>
+    /// OAM data read/write.
+    /// </summary>
+    public const ushort OamData = 0x2004;
+
+    /// <summary>
+    /// PPU scroll register.
+    /// </summary>
+    public const ushort PpuScroll = 0x2005;
+
+    /// <summary>
+    /// VRAM address
+    /// </summary>
+    public const ushort PpuAddress = 0x2006;
+
+    /// <summary>
+    /// VRAM data read/write.
+    /// </summary>
+    public const ushort PpuData = 0x2007;
+
     public const ushort PpuRegistersSize = 0x0008;
     public const ushort PpuRegistersEnd = ApuIoRegisters - 1;
 
     public const ushort ApuIoRegisters = 0x4000;
+
+    public const ushort OamDma = 0x4014;
 
     public const ushort RomPage1 = 0x8000;
     public const ushort RomPage2 = 0xC000;
