@@ -10,8 +10,8 @@
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/src/Host/bin/Debug/net10.0/NesNes.Host.dll",
-            "args": ["--rom", "src/Tests/TestData/nestest/nestest.nes"],
-            "cwd": "${workspaceFolder}",
+            "args": ["--rom", "${workspaceFolder}/src/Tests/TestData/nestest/nestest.nes"],
+            "cwd": "${workspaceFolder}/src/Host",
             "stopAtEntry": false,
             "console": "internalConsole"
         },

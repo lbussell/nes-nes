@@ -93,10 +93,7 @@ public class Ppu
 
         // For now, just draw a random color (white or black).
         // Should look like static/noise.
-        var color =
-            _random.Next(0, 2) == 0
-                ? (byte)0
-                : (byte)255;
+        var color = _random.Next(0, 2) == 0 ? (byte)0 : (byte)255;
 
         _renderPixelCallback?.Invoke(_cycle, _scanline, color, color, color);
     }

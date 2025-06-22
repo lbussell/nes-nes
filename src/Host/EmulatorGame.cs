@@ -1,11 +1,11 @@
 ﻿// SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
-using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using NesNes.Core;
+using NesNes.Host.Web;
 
 namespace NesNes.Host;
 
@@ -14,10 +14,11 @@ internal class EmulatorGame : Game
     private readonly GraphicsDeviceManager _graphics;
     private readonly CartridgeData _cartridge;
     private readonly NesConsole _console;
-    private readonly StringBuilder _log = new();
+    private readonly DebuggerWebApp _debuggerWebApp;
 
     private SpriteBatch? _spriteBatch;
     private SpriteFont? _font;
+    private bool _isPaused = false;
 
     // This is the raw display data that the PPU renders to. Whenever this
     // class decides to render the display, it copies this buffer to the
@@ -46,6 +47,15 @@ internal class EmulatorGame : Game
         // NesNes stuff
         _cartridge = cartridge;
         _console = NesConsole.Create(DrawPixel);
+
+        // Debugger stuff
+        _debuggerWebApp = new DebuggerWebApp(
+            new DebuggerControls
+            {
+                Pause = () => _isPaused = !_isPaused,
+                GetRegisters = () => _console.Cpu.Registers,
+            }
+        );
     }
 
     protected override void Initialize()
@@ -58,6 +68,8 @@ internal class EmulatorGame : Game
         UpdateRenderDestination();
 
         _console.InsertCartridge(_cartridge);
+
+        _debuggerWebApp.Start();
 
         base.Initialize();
     }
@@ -80,7 +92,10 @@ internal class EmulatorGame : Game
 
         for (int i = 0; i < Ppu.Scanlines; i += 1)
         {
-            _console.StepScanline();
+            if (!_isPaused)
+            {
+                _console.StepScanline();
+            }
         }
 
         base.Update(gameTime);

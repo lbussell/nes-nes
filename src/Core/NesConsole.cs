@@ -18,12 +18,15 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     private int _ppuCyclesToRun = 0;
     private int _cpuCyclesSinceLastScanline = 0;
 
+    public Cpu Cpu => _cpu;
+
     /// <summary>
     /// Create a new instance of <see cref="NesConsole"/>.
     /// </summary>
     public static NesConsole Create(
         RenderPixel? renderPixelCallback = null,
-        CpuCallback? onCpuInstructionCompleted = null)
+        CpuCallback? onCpuInstructionCompleted = null
+    )
     {
         var memory = new Memory();
         var registers = Registers.Initial;
