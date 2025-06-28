@@ -5,8 +5,10 @@ namespace NesNes.Core;
 
 public delegate void RenderPixel(ushort x, ushort y, byte r, byte g, byte b);
 
-public class Ppu
+public class Ppu : IMemoryListener
 {
+    #region Constants
+
     /// <summary>
     /// Each scanline lasts for 341 PPU clock cycles. Each cycle produces one
     /// pixel. The first 256 pixels are visible, while the rest is horizontal
@@ -54,12 +56,12 @@ public class Ppu
     /// </summary>
     public const int DisplayWidth = 256;
 
+    #endregion
+
     // This is called whenever a pixel is rendered.
     private readonly RenderPixel? _renderPixelCallback;
 
-    /// Temporary - only used for drawing static/noise for now. Can be removed
-    /// once the PPU is actually drawing game data to the screen.
-    private readonly Random _random = new();
+    private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
 
     /// <summary>
     /// Cartridge data which contains the CHR_ROM which is used for tilesets
@@ -82,6 +84,73 @@ public class Ppu
     public Ppu(RenderPixel? renderPixelCallback = null)
     {
         _renderPixelCallback = renderPixelCallback;
+    }
+
+    /// <summary>
+    /// The memory range that the PPU is interested in intercepting reads and
+    /// writes to. While the PPU is interested in a large range of memory
+    /// (0x2000 to 0x3FFF), it only uses 8 bytes for PPU registers. The rest of
+    /// the PPU's memory just repeats the PPU registers every 8 bytes.
+    /// </summary>
+    public MemoryRange MemoryRange { get; } =
+        new(
+            MemoryRegions.PpuRegisters,
+            MemoryRegions.PpuRegistersEnd
+        );
+
+    /// <inheritdoc/>
+    public bool Read(ushort address, out byte value)
+    {
+        address = MapToMirroredRegisterAddress(address);
+        value = ReadInternal(address);
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool Write(ushort address, byte value)
+    {
+        address = MapToMirroredRegisterAddress(address);
+        WriteInternal(address, value);
+        return true;
+    }
+
+    /// <summary>
+    /// Maps the given address to the appropriate PPU register address, taking
+    /// into account the mirroring of PPU registers as well as the location of
+    /// the PPU registers in memory.
+    /// </summary>
+    /// <param name="address">
+    /// The address to map, in NES memory space
+    /// </param>
+    /// <returns>
+    /// The address mapped to PPU register memory space (0x0 to 0x7)
+    /// </returns>
+    private ushort MapToMirroredRegisterAddress(ushort address)
+    {
+        // Map address back to the range of _registers.
+        address = (ushort)(address - MemoryRange.Start);
+
+        // Mirror PPU registers every 8 bytes
+        address = (ushort)(address % MemoryRegions.PpuRegistersSize);
+        return address;
+    }
+
+    /// <summary>
+    /// Internal method for directly reading from PPU registers with no
+    /// mirroring.
+    /// </summary>
+    private byte ReadInternal(ushort address)
+    {
+        return _registers[address];
+    }
+
+    /// <summary>
+    /// Internal method for directly writing to PPU registers with no
+    /// mirroring.
+    /// </summary>
+    private void WriteInternal(ushort address, byte value)
+    {
+        _registers[address] = value;
     }
 
     /// <summary>
@@ -123,7 +192,7 @@ public class Ppu
 
         // For now, just draw a random color (white or black).
         // Should look like static/noise.
-        var color = _random.Next(0, 2) == 0 ? (byte)0 : (byte)255;
+        var color = Random.Shared.Next(0, 2) == 0 ? (byte)0 : (byte)255;
 
         _renderPixelCallback?.Invoke(_cycle, _scanline, color, color, color);
     }

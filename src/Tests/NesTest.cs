@@ -68,9 +68,9 @@ public class NesTest
     private NesConsole CreateConsole(byte[] nesTestRom, ushort initialPc)
     {
         // Construct the console
-        var memory = new Memory();
-        var cpu = new Cpu(Registers.Initial, memory, Trace);
         var ppu = new Ppu();
+        var memory = new Memory(listeners: [ppu]);
+        var cpu = new Cpu(Registers.Initial, memory, Trace);
         var console = new NesConsole(cpu, ppu, memory);
 
         var cartridge = CartridgeData.FromBytes(nesTestRom);
