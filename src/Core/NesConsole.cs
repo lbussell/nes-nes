@@ -28,10 +28,14 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
         CpuCallback? onCpuInstructionCompleted = null
     )
     {
-        var ppu = new Ppu(renderPixelCallback);
+        var ppu = new Ppu();
         var memory = new Memory(listeners: [ppu]);
         var registers = Registers.Initial;
         var cpu = new Cpu(registers, memory, onCpuInstructionCompleted);
+
+        ppu.RenderPixelCallback = renderPixelCallback;
+        ppu.NmiCallback = cpu.QueueNonMaskableInterrupt;
+
         return new NesConsole(cpu, ppu, memory);
     }
 

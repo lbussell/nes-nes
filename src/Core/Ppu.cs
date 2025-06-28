@@ -56,10 +56,23 @@ public class Ppu : IMemoryListener
     /// </summary>
     public const int DisplayWidth = 256;
 
-    #endregion
+    /// <summary>
+    /// When the PPU enters this scanline, it triggers an NMI (non-masking
+    /// interrupt)
+    /// </summary>
+    public const int VblankScanline = 241;
 
-    // This is called whenever a pixel is rendered.
-    private readonly RenderPixel? _renderPixelCallback;
+    /// <summary>
+    /// The PPU control register index into _registers
+    /// </summary>
+    private const int PpuCtrl = 0;
+
+    /// <summary>
+    /// The PPU status register index into _registers
+    /// </summary>
+    private const int PpuStatus = 2;
+
+    #endregion
 
     private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
 
@@ -76,15 +89,14 @@ public class Ppu : IMemoryListener
     private ushort _scanline = 0;
 
     /// <summary>
-    /// Create a new instance of the PPU.
+    /// This is called whenever a pixel is rendered.
     /// </summary>
-    /// <param name="renderPixelCallback">
-    /// This callback will be called whenever the PPU renders a pixel.
-    /// </param>
-    public Ppu(RenderPixel? renderPixelCallback = null)
-    {
-        _renderPixelCallback = renderPixelCallback;
-    }
+    public RenderPixel? RenderPixelCallback { get; set; }
+
+    /// <summary>
+    /// Called whenever the PPU triggers an NMI (non-maskable interrupt).
+    /// </summary>
+    public Action? NmiCallback { get; set; }
 
     /// <summary>
     /// The memory range that the PPU is interested in intercepting reads and
@@ -97,6 +109,18 @@ public class Ppu : IMemoryListener
             MemoryRegions.PpuRegisters,
             MemoryRegions.PpuRegistersEnd
         );
+
+    private bool NmiEnabled
+    {
+        get => GetRegisterBit(PpuCtrl, 1 << 7);
+        set => SetRegisterBit(PpuCtrl, 1 << 7, value);
+    }
+
+    private bool VblankFlag
+    {
+        get => GetRegisterBit(PpuStatus, 1 << 7);
+        set => SetRegisterBit(PpuStatus, 1 << 7, value);
+    }
 
     /// <inheritdoc/>
     public bool Read(ushort address, out byte value)
@@ -141,7 +165,15 @@ public class Ppu : IMemoryListener
     /// </summary>
     private byte ReadInternal(ushort address)
     {
-        return _registers[address];
+        var value = _registers[address];
+
+        if (address == 2)
+        {
+            // Reading PPUSTATUS will clear the VBlank flag.
+            VblankFlag = false;
+        }
+
+        return value;
     }
 
     /// <summary>
@@ -179,11 +211,36 @@ public class Ppu : IMemoryListener
     /// </summary>
     private void Step()
     {
-        _cycle += 1;
         if (_cycle >= CyclesPerScanline)
         {
             _cycle = 0;
             _scanline += 1;
+
+            // The vblank flag is set at the start of vblank (scanline 241).
+            // Reading PPUSTATUS will return the current state of this flag and
+            // then clear it. If the vblank flag is not cleared by reading, it
+            // will be cleared automatically on dot 1 of the prerender
+            // scanline.
+            if (_scanline == VblankScanline)
+            {
+                VblankFlag = true;
+            }
+
+            // VBlank is cleared on the first dot of scanline 261.
+            if (_scanline == Scanlines - 1)
+            {
+                VblankFlag = false;
+            }
+
+            // Trigger NMI (non-maskable interrupt) on the CPU.
+            if (NmiEnabled && VblankFlag)
+            {
+                // We "read" the PPU status register, so we need to clear the
+                // VBlank flag
+                VblankFlag = false;
+                NmiCallback?.Invoke();
+            }
+
             if (_scanline >= Scanlines)
             {
                 _scanline = 0;
@@ -194,6 +251,37 @@ public class Ppu : IMemoryListener
         // Should look like static/noise.
         var color = Random.Shared.Next(0, 2) == 0 ? (byte)0 : (byte)255;
 
-        _renderPixelCallback?.Invoke(_cycle, _scanline, color, color, color);
+        RenderPixelCallback?.Invoke(_cycle, _scanline, color, color, color);
+
+        _cycle += 1;
+    }
+
+    /// <summary>
+    /// Gets the state of a specific bit in a PPU register.
+    /// </summary>
+    /// <param name="registerIndex">The index of the register (0-7)</param>
+    /// <param name="bitMask">The bit mask to check</param>
+    /// <returns>True if the bit is set, false otherwise</returns>
+    private bool GetRegisterBit(int registerIndex, byte bitMask)
+    {
+        return (_registers[registerIndex] & bitMask) != 0;
+    }
+
+    /// <summary>
+    /// Sets or clears a specific bit in a PPU register.
+    /// </summary>
+    /// <param name="registerIndex">The index of the register (0-7)</param>
+    /// <param name="bitMask">The bit mask to set or clear</param>
+    /// <param name="value">True to set the bit, false to clear it</param>
+    private void SetRegisterBit(int registerIndex, byte bitMask, bool value)
+    {
+        if (value)
+        {
+            _registers[registerIndex] |= bitMask;
+        }
+        else
+        {
+            _registers[registerIndex] &= (byte)~bitMask;
+        }
     }
 }

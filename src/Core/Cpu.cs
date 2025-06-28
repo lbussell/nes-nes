@@ -51,6 +51,11 @@ public class Cpu
     /// </exception>
     public int Step()
     {
+        if (_nmiPending)
+        {
+            return NonMaskableInterrupt();
+        }
+
         var oldPC = _registers.PC;
 
         // Load next instruction
@@ -95,6 +100,31 @@ public class Cpu
         }
 
         return implementedOpcodes;
+    }
+
+    private bool _nmiPending = false;
+
+    public void QueueNonMaskableInterrupt()
+    {
+        _nmiPending = true;
+    }
+
+    private int NonMaskableInterrupt()
+    {
+        _nmiPending = false;
+
+        // Store PC and Status on the stack
+        PushStack(_registers.PC);
+        PushStack((byte)_registers.P);
+
+        // Disable interrupts
+        _registers.SetFlag(Flags.InterruptDisable);
+
+        // Load PC with the address in the NMI vector
+        _registers.PC = _memory.Read16(MemoryRegions.NmiVector);
+
+        // All of that takes 7 cycles!
+        return 7;
     }
 
     #region Instructions

@@ -139,6 +139,7 @@ public static class MemoryRegions
     public const ushort RomEnd = 0xFFFF;
     public const ushort RomPageSize = 0x4000;
 
+    public const ushort NmiVector = 0xFFFA;
     public const ushort ResetVector = 0xFFFC;
 
     public const int TotalSize = 0x10000;
