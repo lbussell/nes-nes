@@ -3,13 +3,6 @@
 
 namespace NesNes.Core;
 
-public enum MirroringMode
-{
-    Horizontal,
-    Vertical,
-    FourScreen,
-}
-
 public record CartridgeData
 {
     /// <summary>

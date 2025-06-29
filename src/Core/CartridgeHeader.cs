@@ -5,6 +5,9 @@ namespace NesNes.Core;
 
 public record CartridgeHeader
 {
+    /// <summary>
+    /// Size of the cartridge header in bytes.
+    /// </summary>
     public const byte Size = 0x10;
 
     /// <summary>
@@ -15,6 +18,19 @@ public record CartridgeHeader
     /// </remarks>
     private readonly byte[] _data = new byte[Size];
 
+    public CartridgeHeader(ReadOnlySpan<byte> headerData)
+    {
+        if (headerData.Length != Size)
+        {
+            throw new ArgumentException(
+                $"Header data must be exactly {Size} bytes long.",
+                nameof(headerData)
+            );
+        }
+
+        headerData.CopyTo(_data);
+    }
+
     /// <summary>
     /// Size of PRG ROM in 16KB units.
     /// </summary>
@@ -24,17 +40,4 @@ public record CartridgeHeader
     /// Size of CHR ROM in 8KB units
     /// </summary>
     public byte ChrPages => _data[5];
-
-    public CartridgeHeader(ReadOnlySpan<byte> headerData)
-    {
-        if (headerData.Length != 0x10)
-        {
-            throw new ArgumentException(
-                "Header data must be exactly 16 bytes long.",
-                nameof(headerData)
-            );
-        }
-
-        headerData.CopyTo(_data);
-    }
 }
