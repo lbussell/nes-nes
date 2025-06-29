@@ -5,6 +5,16 @@ namespace NesNes.Core;
 
 public delegate void RenderPixel(ushort x, ushort y, byte r, byte g, byte b);
 
+/// <summary>
+/// The NES's PPU is what renders the graphics on the screen.
+/// </summary>
+/// <remarks>
+/// The PPU has its own memory space separate from the CPU's memory. The CPU
+/// does not have direct read/write access to the PPU's memory. Instead, the
+/// CPU can read/write to the PPU's memory by talking to the PPU's registers.
+/// The PPU's registers are mapped to $2000-$2007 (and mirrored all the way up
+/// to $4000) on the main memory bus.
+/// <remarks/>
 public class Ppu : IMemoryListener
 {
     #region Constants
@@ -71,7 +81,7 @@ public class Ppu : IMemoryListener
     // https://www.nesdev.org/wiki/PPU_memory_map
     private const int PatternTablesEnd = 0x2000;
     private const int NameTablesEnd = 0x3000;
-    private const int NameTableSize = 1024;
+    private const int NameTableSize = 0x400;
     private const int PaletteRamStart = 0x3F00;
     private const int PaletteRamEnd = 0x4000;
 
