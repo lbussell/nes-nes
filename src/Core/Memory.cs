@@ -50,11 +50,15 @@ public class Memory : IMemory
         // start trying to actually run Concentration Room or Donkey Kong.
 
         // cart.PrgRom has already taken into account the header offset (0x10)
-        ReadOnlySpan<byte> prgRomData = cart.PrgRom[..CartridgeData.PrgRomPageSize];
+        ReadOnlySpan<byte> prgRomData = cart.PrgRom;
 
-        // Copy the ROM data into both $8000-$BFFF and $C000-$FFFF
-        prgRomData.CopyTo(RomPage1);
-        prgRomData.CopyTo(RomPage2);
+        cart.PrgRom.CopyTo(_rom);
+
+        // If the cartridge has only one PRG page, copy it to the second page
+        if (cart.Header.PrgPages == 1)
+        {
+            cart.PrgRom.CopyTo(RomPage2);
+        }
     }
 
     /// <inheritdoc/>
@@ -120,7 +124,8 @@ public class Memory : IMemory
 
         if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
         {
-            return ref _rom[address - MemoryRegions.RomPage1];
+            var romAddress = address - MemoryRegions.RomPage1;
+            return ref _rom[romAddress];
         }
 
         return ref _memory[address];

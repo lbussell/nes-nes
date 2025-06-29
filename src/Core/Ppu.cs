@@ -132,6 +132,17 @@ public class Ppu : IMemoryListener
         set => SetRegisterBit(PpuStatus, 1 << 7, value);
     }
 
+    /// <summary>
+    /// Indicates whether the PPU should increment the address register by 1
+    /// byte or by 32 bytes (one row of the nametable) when the address
+    /// register is read. True = increment by 32, false = increment by 1.
+    /// </summary>
+    private bool IncrementMode
+    {
+        get => GetRegisterBit(PpuCtrl, 1 << 2);
+        set => SetRegisterBit(PpuCtrl, 1 << 2, value);
+    }
+
     /// <inheritdoc/>
     public bool ListenRead(ushort address, out byte value)
     {
@@ -180,9 +191,13 @@ public class Ppu : IMemoryListener
     {
         switch (address)
         {
+            case PpuStatus:
+                _addressRegister.ResetLatch();
+                return _registers[address];
             case PpuData:
                 var result = _dataBuffer;
                 _dataBuffer = ReadMemory(_addressRegister.Value);
+                _addressRegister.Increment(IncrementMode);
                 return result;
             default:
                 return _registers[address];
@@ -199,6 +214,10 @@ public class Ppu : IMemoryListener
         {
             case PpuAddress:
                 _addressRegister.Write(value);
+                break;
+            case PpuData:
+                WriteMemory(_addressRegister.Value, value);
+                _addressRegister.Increment(IncrementMode);
                 break;
             default:
                 _registers[address] = value;
@@ -244,7 +263,7 @@ public class Ppu : IMemoryListener
         {
             // Pattern tables are read-only for most games
         }
-        if (address < NameTablesEnd)
+        else if (address < NameTablesEnd)
         {
             // TODO: Implement nametable mirroring
             // For now, just read/write to the first nametable only
@@ -252,11 +271,11 @@ public class Ppu : IMemoryListener
             nameTableAddress %= NameTableSize;
             _nameTables[(ushort)nameTableAddress] = value;
         }
-        if (address < PaletteRamStart)
+        else if (address < PaletteRamStart)
         {
             // Unused memory region
         }
-        if (address < PaletteRamEnd)
+        else if (address < PaletteRamEnd)
         {
             var paletteAddress = address - 0x3F00;
             paletteAddress %= 0x20;
@@ -327,13 +346,15 @@ public class Ppu : IMemoryListener
 
         if (_cycle < DisplayWidth && _scanline < DisplayHeight)
         {
-            // var color = NametableToColor(_cycle, _scanline);
+            var index = PixelToNameTableIndex(_scanline, _cycle);
+            var nameTableData = _nameTables[(ushort)index];
+            var color = RandomColor(nameTableData);
             RenderPixelCallback?.Invoke(
                 _cycle,
                 _scanline,
-                s_randomColor.R,
-                s_randomColor.G,
-                s_randomColor.B
+                color.R,
+                color.G,
+                color.B
             );
         }
 
@@ -373,5 +394,20 @@ public class Ppu : IMemoryListener
         {
             _registers[registerIndex] &= (byte)~bitMask;
         }
+    }
+
+    // Generate a deterministic random color based on the index.
+    private Color RandomColor(int index)
+    {
+        var r = (byte)(index * 37 % 256);
+        var g = (byte)(index * 73 % 256);
+        var b = (byte)(index * 101 % 256);
+        return new Color(r, g, b);
+    }
+
+    // Convert a pixel coordinate (scanline, cycle) to a name table index (32x30).
+    private static int PixelToNameTableIndex(int scanline, int cycle)
+    {
+        return (scanline / 8) * 32 + (cycle / 8);
     }
 }

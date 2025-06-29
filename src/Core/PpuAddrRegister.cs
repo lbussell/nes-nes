@@ -45,6 +45,19 @@ public class PpuAddrRegister
         _nextWriteIsLowByte = !_nextWriteIsLowByte;
     }
 
+    /// <summary>
+    /// Increment the address register. It can be incremented by 1 or 32,
+    /// depending on the increment mode.
+    /// </summary>
+    /// <param name="incrementByRow">
+    /// When true, address will be incremented by one row (32 bytes) instead of
+    /// by one column (1 byte).
+    /// </param>
+    public void Increment(bool incrementByRow = false)
+    {
+        Value = (ushort)(Value + (incrementByRow ? 32 : 1));
+    }
+
     public void ResetLatch()
     {
         _nextWriteIsLowByte = false;

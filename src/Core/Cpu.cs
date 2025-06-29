@@ -11,6 +11,7 @@ public class Cpu
     private readonly IMemory _memory;
     private Registers _registers;
     private readonly CpuCallback? _onInstructionCompleted;
+    private int _totalCyclesElapsed = 0;
 
     public Cpu(Registers registers, IMemory memory, CpuCallback? onInstructionCompleted = null)
     {
@@ -68,6 +69,7 @@ public class Cpu
             throw new InvalidOperationException(
                 $"Unknown opcode: {opcode:X2} at PC: {_registers.PC - 1:X4}"
             );
+            return 5;
         }
 
         // Run callback function if it was provided
@@ -78,6 +80,7 @@ public class Cpu
 
         // Return the number of cycles the instruction took to execute
         var cyclesElapsed = instruction.Execute();
+        _totalCyclesElapsed += cyclesElapsed;
         return cyclesElapsed;
     }
 
