@@ -14,6 +14,6 @@ public static class ShouldlyExtensions
     /// <param name="expected">The expected value.</param>
     public static void ShouldBe(this byte actual, byte expected)
     {
-        ((int)actual).ShouldBe(expected);
+        ((int)actual).ShouldBe(expected, $"Expected ${expected:X2}, but got ${actual:X2}.");
     }
 }

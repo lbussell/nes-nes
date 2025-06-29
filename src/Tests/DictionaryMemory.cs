@@ -12,7 +12,12 @@ namespace NesNes.Tests;
 /// </summary>
 public class DictionaryMemory : IMemory
 {
-    private readonly Dictionary<ushort, byte> _memory = [];
+    private readonly Dictionary<ushort, byte> _memory;
+
+    public DictionaryMemory(Dictionary<ushort, byte>? initialMemory = null)
+    {
+        _memory = initialMemory ?? [];
+    }
 
     /// <summary>
     /// Initializes memory with the provided address-value pairs.

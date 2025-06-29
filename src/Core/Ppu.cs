@@ -90,13 +90,11 @@ public class Ppu : IMemoryListener
     #endregion
 
     private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
-    private readonly byte[][] _nametables = [new byte[NametableSize], new byte[NametableSize]];
+    private readonly IMemory _nametables;
     private readonly byte[] _paletteRam = new byte[0x20];
     private readonly byte[] _oamData = new byte[0x100];
 
-    /// <summary>
-    /// Cartridge data which contains the CHR_ROM which is used for tilesets
-    /// </summary>
+    // Cartridge data which contains the CHR_ROM which is used for tilesets
     private CartridgeData? _cartridge;
 
     // The current PPU cycle (0-340). This also roughly corresponds to which
@@ -105,6 +103,11 @@ public class Ppu : IMemoryListener
 
     // The current scanline (0-261).
     private ushort _scanline = 0;
+
+    public Ppu(IMemory? initialNametables = null)
+    {
+        _nametables = initialNametables ?? new SimpleMemory(2 * NametableSize);
+    }
 
     /// <summary>
     /// This is called whenever a pixel is rendered.
