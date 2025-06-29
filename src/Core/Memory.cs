@@ -67,7 +67,7 @@ public class Memory : IMemory
                 // If the listener handles this address, delegate the read to
                 // the listener. If the listener returned false, it hears the
                 // read but we'll continue to the next listener.
-                if (listener.Read(address, out byte value))
+                if (listener.ListenRead(address, out byte value))
                 {
                     return value;
                 }
@@ -89,7 +89,7 @@ public class Memory : IMemory
                 // If the listener handled the write, we can stop here. If it
                 // returned false, it heard the write but we'll continue to the
                 // next listener.
-                if (listener.Write(address, value))
+                if (listener.ListenWrite(address, value))
                 {
                     return;
                 }

@@ -72,9 +72,27 @@ public class Ppu : IMemoryListener
     /// </summary>
     private const int PpuStatus = 2;
 
+    /// <summary>
+    /// The PPU address register index into _registers.
+    /// </summary>
+    private const int PpuAddress = 6;
+
+    /// <summary>
+    /// The PPU data register index into _registers
+    /// </summary>
+    private const int PpuData = 7;
+
+    /// <summary>
+    /// The size of one nametable in bytes.
+    /// </summary>
+    private const int NametableSize = 1024;
+
     #endregion
 
     private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
+    private readonly byte[][] _nametables = [new byte[NametableSize], new byte[NametableSize]];
+    private readonly byte[] _paletteRam = new byte[0x20];
+    private readonly byte[] _oamData = new byte[0x100];
 
     /// <summary>
     /// Cartridge data which contains the CHR_ROM which is used for tilesets
@@ -105,10 +123,7 @@ public class Ppu : IMemoryListener
     /// the PPU's memory just repeats the PPU registers every 8 bytes.
     /// </summary>
     public MemoryRange MemoryRange { get; } =
-        new(
-            MemoryRegions.PpuRegisters,
-            MemoryRegions.PpuRegistersEnd
-        );
+        new(MemoryRegions.PpuRegisters, MemoryRegions.PpuRegistersEnd);
 
     private bool NmiEnabled
     {
@@ -123,18 +138,18 @@ public class Ppu : IMemoryListener
     }
 
     /// <inheritdoc/>
-    public bool Read(ushort address, out byte value)
+    public bool ListenRead(ushort address, out byte value)
     {
         address = MapToMirroredRegisterAddress(address);
-        value = ReadInternal(address);
+        value = ReadInternalRegister(address);
         return true;
     }
 
     /// <inheritdoc/>
-    public bool Write(ushort address, byte value)
+    public bool ListenWrite(ushort address, byte value)
     {
         address = MapToMirroredRegisterAddress(address);
-        WriteInternal(address, value);
+        WriteInternalRegister(address, value);
         return true;
     }
 
@@ -163,24 +178,16 @@ public class Ppu : IMemoryListener
     /// Internal method for directly reading from PPU registers with no
     /// mirroring.
     /// </summary>
-    private byte ReadInternal(ushort address)
+    private byte ReadInternalRegister(ushort address)
     {
-        var value = _registers[address];
-
-        if (address == 2)
-        {
-            // Reading PPUSTATUS will clear the VBlank flag.
-            VblankFlag = false;
-        }
-
-        return value;
+        return _registers[address];
     }
 
     /// <summary>
     /// Internal method for directly writing to PPU registers with no
     /// mirroring.
     /// </summary>
-    private void WriteInternal(ushort address, byte value)
+    private void WriteInternalRegister(ushort address, byte value)
     {
         _registers[address] = value;
     }
@@ -232,11 +239,10 @@ public class Ppu : IMemoryListener
                 VblankFlag = false;
             }
 
-            // Trigger NMI (non-maskable interrupt) on the CPU.
+            // Trigger NMI (non-maskable interrupt)
             if (NmiEnabled && VblankFlag)
             {
-                // We "read" the PPU status register, so we need to clear the
-                // VBlank flag
+                // We "read" the PPU status register, so we need to clear the VBlank flag.
                 VblankFlag = false;
                 NmiCallback?.Invoke();
             }
@@ -247,14 +253,26 @@ public class Ppu : IMemoryListener
             }
         }
 
-        // For now, just draw a random color (white or black).
-        // Should look like static/noise.
-        var color = Random.Shared.Next(0, 2) == 0 ? (byte)0 : (byte)255;
-
-        RenderPixelCallback?.Invoke(_cycle, _scanline, color, color, color);
+        if (_cycle < DisplayWidth && _scanline < DisplayHeight)
+        {
+            // var color = NametableToColor(_cycle, _scanline);
+            RenderPixelCallback?.Invoke(
+                _cycle,
+                _scanline,
+                s_randomColor.R,
+                s_randomColor.G,
+                s_randomColor.B
+            );
+        }
 
         _cycle += 1;
     }
+
+    private static Color s_randomColor = new(
+        (byte)Random.Shared.Next(0xFF),
+        (byte)Random.Shared.Next(0xFF),
+        (byte)Random.Shared.Next(0xFF)
+    );
 
     /// <summary>
     /// Gets the state of a specific bit in a PPU register.
