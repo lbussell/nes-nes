@@ -40,7 +40,6 @@ public class MemoryTests
     [Theory]
     [InlineData(0x00, 0xBB)]
     [InlineData(0x03, 0xBB)]
-    [InlineData(0x07, 0xBB)]
     public void PpuRegistersShouldBeMirrored(byte offset, byte inputValue)
     {
         ((ushort)offset).ShouldBeLessThan(MemoryRegions.PpuRegistersSize);

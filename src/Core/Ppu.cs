@@ -62,35 +62,24 @@ public class Ppu : IMemoryListener
     /// </summary>
     public const int VblankScanline = 241;
 
-    /// <summary>
-    /// The PPU control register index into _registers
-    /// </summary>
+    // The following are indices into the _registers memory array
     private const int PpuCtrl = 0;
-
-    /// <summary>
-    /// The PPU status register index into _registers
-    /// </summary>
     private const int PpuStatus = 2;
-
-    /// <summary>
-    /// The PPU address register index into _registers.
-    /// </summary>
     private const int PpuAddress = 6;
-
-    /// <summary>
-    /// The PPU data register index into _registers
-    /// </summary>
     private const int PpuData = 7;
 
-    /// <summary>
-    /// The size of one nametable in bytes.
-    /// </summary>
-    private const int NametableSize = 1024;
+    // https://www.nesdev.org/wiki/PPU_memory_map
+    private const int PatternTablesEnd = 0x2000;
+    private const int NameTablesEnd = 0x3000;
+    private const int NameTableSize = 1024;
+    private const int PaletteRamStart = 0x3F00;
+    private const int PaletteRamEnd = 0x4000;
 
     #endregion
 
+    private readonly PpuAddrRegister _addressRegister = new();
     private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
-    private readonly IMemory _nametables;
+    private readonly IMemory _nameTables;
     private readonly byte[] _paletteRam = new byte[0x20];
     private readonly byte[] _oamData = new byte[0x100];
 
@@ -104,9 +93,12 @@ public class Ppu : IMemoryListener
     // The current scanline (0-261).
     private ushort _scanline = 0;
 
+    // Data buffer used for delaying reads of PPU memory
+    private byte _dataBuffer;
+
     public Ppu(IMemory? initialNametables = null)
     {
-        _nametables = initialNametables ?? new SimpleMemory(2 * NametableSize);
+        _nameTables = initialNametables ?? new SimpleMemory(2 * NameTableSize);
     }
 
     /// <summary>
@@ -181,9 +173,20 @@ public class Ppu : IMemoryListener
     /// Internal method for directly reading from PPU registers with no
     /// mirroring.
     /// </summary>
+    /// <param name="address">
+    /// Should always be in the range of 0x0 to 0x7
+    /// </param>
     private byte ReadInternalRegister(ushort address)
     {
-        return _registers[address];
+        switch (address)
+        {
+            case PpuData:
+                var result = _dataBuffer;
+                _dataBuffer = ReadMemory(_addressRegister.Value);
+                return result;
+            default:
+                return _registers[address];
+        }
     }
 
     /// <summary>
@@ -192,7 +195,73 @@ public class Ppu : IMemoryListener
     /// </summary>
     private void WriteInternalRegister(ushort address, byte value)
     {
-        _registers[address] = value;
+        switch (address)
+        {
+            case PpuAddress:
+                _addressRegister.Write(value);
+                break;
+            default:
+                _registers[address] = value;
+                break;
+        }
+    }
+
+    private byte ReadMemory(ushort address)
+    {
+        if (address < PatternTablesEnd)
+        {
+            return _cartridge?.ChrRom[address] ?? 0;
+        }
+        if (address < NameTablesEnd)
+        {
+            // TODO: Implement nametable mirroring
+            // For now, just read/write to the first nametable only
+            var nameTableAddress = address - 0x2000;
+            nameTableAddress %= NameTableSize;
+            return _nameTables[(ushort)nameTableAddress];
+        }
+        if (address < PaletteRamStart)
+        {
+            // Unused memory region
+            return 0;
+        }
+        if (address < PaletteRamEnd)
+        {
+            var paletteAddress = address - 0x3F00;
+            paletteAddress %= 0x20;
+            return _paletteRam[paletteAddress];
+        }
+
+        throw new ArgumentOutOfRangeException(
+            nameof(address),
+            "Address out of range for PPU memory"
+        );
+    }
+
+    private void WriteMemory(ushort address, byte value)
+    {
+        if (address < PatternTablesEnd)
+        {
+            // Pattern tables are read-only for most games
+        }
+        if (address < NameTablesEnd)
+        {
+            // TODO: Implement nametable mirroring
+            // For now, just read/write to the first nametable only
+            var nameTableAddress = address - 0x2000;
+            nameTableAddress %= NameTableSize;
+            _nameTables[(ushort)nameTableAddress] = value;
+        }
+        if (address < PaletteRamStart)
+        {
+            // Unused memory region
+        }
+        if (address < PaletteRamEnd)
+        {
+            var paletteAddress = address - 0x3F00;
+            paletteAddress %= 0x20;
+            _paletteRam[paletteAddress] = value;
+        }
     }
 
     /// <summary>
