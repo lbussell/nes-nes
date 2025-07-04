@@ -16,7 +16,7 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     private CartridgeData? _cartridge = null;
 
     private int _cpuCycles = 0;
-    private int _ppuCyclesToRun = 0;
+    private int _ppuCyclesForThisScanline = 0;
     private int _cpuCyclesSinceLastScanline = 0;
 
     public Cpu Cpu => _cpu;
@@ -74,26 +74,26 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
 
     public void StepScanline()
     {
-        int ppuCyclesToRun = 0;
         int cpuCyclesSinceLastScanline = 0;
 
-        while (ppuCyclesToRun < Ppu.CyclesPerScanline)
+        while (_ppuCyclesForThisScanline < Ppu.CyclesPerScanline)
         {
             int elapsedCpuCycles = StepCpu();
             _cpuCycles += elapsedCpuCycles;
             cpuCyclesSinceLastScanline += elapsedCpuCycles;
-            ppuCyclesToRun += elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
+
+            // Run the PPU for the number of cycles we calculated to catch up
+            // with the CPU.
+            int elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
+            _ppu.Step(elapsedPpuCycles);
+            _ppuCyclesForThisScanline += elapsedPpuCycles;
         }
 
         _cpuCycles += cpuCyclesSinceLastScanline;
 
-        // Run the PPU for the number of cycles we calculated to catch up with
-        // the CPU.
-        _ppu.Step(ppuCyclesToRun);
-
         // We completed one scanline, but we may have over-shot the target
         // number of cycles. If we did any extra work, we should make sure not
         // to count that towards the next scanline.
-        _ppuCyclesToRun -= Ppu.CyclesPerScanline;
+        _ppuCyclesForThisScanline -= Ppu.CyclesPerScanline;
     }
 }
