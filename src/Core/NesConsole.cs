@@ -13,12 +13,15 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     private readonly Cpu _cpu = cpu;
     private readonly Ppu _ppu = ppu;
     private readonly Memory _memory = memory;
+    private CartridgeData? _cartridge = null;
 
     private int _cpuCycles = 0;
     private int _ppuCyclesToRun = 0;
     private int _cpuCyclesSinceLastScanline = 0;
 
     public Cpu Cpu => _cpu;
+
+    public Ppu Ppu => _ppu;
 
     /// <summary>
     /// Create a new instance of <see cref="NesConsole"/>.
@@ -41,9 +44,13 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
 
     public int CpuCycles => _cpuCycles;
 
+    public bool HasCartridge => _cartridge is not null;
+
     public void InsertCartridge(CartridgeData cart)
     {
+        _cartridge = cart;
         _memory.LoadRom(cart);
+        _ppu.LoadRom(cart);
         Reset();
     }
 

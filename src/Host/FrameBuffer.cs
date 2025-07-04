@@ -38,4 +38,12 @@ internal sealed class FrameBuffer : IRenderTarget
 
         _buffer[index] = color;
     }
+
+    internal void Clear(Color color)
+    {
+        for (int i = 0; i < _buffer.Length; i++)
+        {
+            _buffer[i] = color;
+        }
+    }
 }

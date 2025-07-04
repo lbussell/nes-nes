@@ -37,15 +37,18 @@ public class Ppu : IMemoryListener
     /// </summary>
     public const int Scanlines = 262;
 
-    /// <summary>
-    /// Pattern table height in terms of 16x16 tiles.
-    /// </summary>
-    public const int PatternTableHeight = 16;
+    public const int PatternTableTilesHeight = 16;
+    public const int PatternTableTilesWidth = 16;
+    public const int PatternTableTilesCount = PatternTableTilesHeight * PatternTableTilesWidth;
+    public const int PatternTablePixelWidth = PatternTableTilesWidth * PatternSize;
+    public const int PatternTablePixelHeight = PatternTableTilesHeight * PatternSize;
+    public const int PatternTableSizeBytes = PatternTableTilesWidth * PatternTableTilesHeight * BytesPerTile;
 
     /// <summary>
-    /// Pattern table width in terms of 16x16 tiles.
+    /// Size of a single pattern in the pattern table, in pixels. Patterns are
+    /// square.
     /// </summary>
-    public const int PatternTableWidth = 16;
+    public const int PatternSize = 8;
 
     /// <summary>
     /// Number of bytes per tile in the pattern table. Each tile is 16x16
@@ -90,6 +93,8 @@ public class Ppu : IMemoryListener
     private readonly PpuAddrRegister _addressRegister = new();
     private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
     private readonly IMemory _nameTables;
+    private ReadOnlySpan<byte> _patternTables =>
+        _cartridge is not null ? _cartridge.ChrRom : throw new InvalidOperationException();
     private readonly byte[] _paletteRam = new byte[0x20];
     private readonly byte[] _oamData = new byte[0x100];
 
@@ -110,6 +115,10 @@ public class Ppu : IMemoryListener
     {
         _nameTables = initialNametables ?? new SimpleMemory(2 * NameTableSize);
     }
+
+    public ReadOnlySpan<byte> PatternTables => _patternTables;
+
+    public IMemory NameTables => _nameTables;
 
     /// <summary>
     /// This is called whenever a pixel is rendered.
@@ -203,10 +212,21 @@ public class Ppu : IMemoryListener
         {
             case PpuStatus:
                 _addressRegister.ResetLatch();
+                // Reading from the status register clears the vertical blank flag.
+                VblankFlag = false;
+                // Temporary hacky hack to get past the part where we're getting stuck:
+                VblankFlag = true;
                 return _registers[address];
             case PpuData:
                 var result = _dataBuffer;
                 _dataBuffer = ReadMemory(_addressRegister.Value);
+
+                // Palette RAM can be read immediately without going through the data buffer
+                if (_addressRegister.Value >= PaletteRamStart && _addressRegister.Value < PaletteRamEnd)
+                {
+                    result = _dataBuffer;
+                }
+
                 _addressRegister.Increment(IncrementMode);
                 return result;
             default:
@@ -356,26 +376,21 @@ public class Ppu : IMemoryListener
 
         if (_cycle < DisplayWidth && _scanline < DisplayHeight)
         {
-            var index = PixelToNameTableIndex(_scanline, _cycle);
-            var nameTableData = _nameTables[(ushort)index];
-            var color = RandomColor(nameTableData);
-            RenderPixelCallback?.Invoke(
-                _cycle,
-                _scanline,
-                color.R,
-                color.G,
-                color.B
-            );
+            var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
+            var patternTableIndex = _nameTables[(ushort)nameTableIndex];
+
+            var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
+            var pattern = GetPattern(patternTableIndex, backgroundPatternTable);
+
+            var paletteNumber = GetAttributeTableValue(_scanline, _cycle);
+            var colorIndex = GetBackgroundPixelColorIndex(pattern, _scanline % 8, _cycle % 8);
+            var color = GetPaletteColor(paletteNumber, colorIndex);
+
+            RenderPixelCallback?.Invoke(_cycle, _scanline, color.R, color.G, color.B);
         }
 
         _cycle += 1;
     }
-
-    private static Color s_randomColor = new(
-        (byte)Random.Shared.Next(0xFF),
-        (byte)Random.Shared.Next(0xFF),
-        (byte)Random.Shared.Next(0xFF)
-    );
 
     /// <summary>
     /// Gets the state of a specific bit in a PPU register.
@@ -406,18 +421,134 @@ public class Ppu : IMemoryListener
         }
     }
 
-    // Generate a deterministic random color based on the index.
-    private Color RandomColor(int index)
-    {
-        var r = (byte)(index * 37 % 256);
-        var g = (byte)(index * 73 % 256);
-        var b = (byte)(index * 101 % 256);
-        return new Color(r, g, b);
-    }
-
     // Convert a pixel coordinate (scanline, cycle) to a name table index (32x30).
     private static int PixelToNameTableIndex(int scanline, int cycle)
     {
         return (scanline / 8) * 32 + (cycle / 8);
+    }
+
+    /// <summary>
+    /// Returns all of the data for a single tile in the pattern table.
+    /// </summary>
+    public ReadOnlySpan<byte> GetPattern(int patternIndex, int table = 0)
+    {
+        var patternTableOffset = (patternIndex * BytesPerTile) + (table * PatternTableSizeBytes);
+        return _patternTables.Slice(patternTableOffset, BytesPerTile);
+    }
+
+    /// <summary>
+    /// Get a pattern based on row and column in pattern-table space (not pixel
+    /// space).
+    /// </summary>
+    public ReadOnlySpan<byte> GetPattern(int pixelRow, int pixelCol, int table = 0)
+    {
+        int patternRow = pixelRow / PatternSize;
+        int patternCol = pixelCol / PatternSize;
+        int patternIndex = patternRow * PatternTableTilesWidth + patternCol;
+        int patternTableOffset = patternIndex * BytesPerTile;
+        patternTableOffset += table * PatternTableSizeBytes;
+
+        var pattern = _patternTables.Slice(patternTableOffset, BytesPerTile);
+        return pattern;
+    }
+
+    /// <summary>
+    /// Temporary, used only to visualize the pattern table.
+    /// </summary>
+    public Color GetPatternTablePixel(int pixelRow, int pixelCol, bool useGrayscale = true)
+    {
+        // Display color palettes on top of the pattern table for now
+        const int PaletteVisualizationSize = 4;
+        const int TotalPaletteColors = 8 * 4;
+        if (pixelRow < PaletteVisualizationSize && pixelCol < TotalPaletteColors * PaletteVisualizationSize)
+        {
+            pixelCol /= PaletteVisualizationSize;
+            var paletteColor = GetPaletteColor(
+                paletteNumber: pixelCol / 4,
+                colorIndex: pixelCol % 4
+            );
+
+            return paletteColor;
+        }
+
+        // The second pattern table is located directly to the right of the first
+        int patternTableNumber = pixelCol >= PatternTablePixelWidth ? 1 : 0;
+        var pattern = GetPattern(pixelRow, pixelCol % PatternTablePixelWidth, patternTableNumber);
+
+        // Use the first background palette for pattern table visualization
+        var colorIndex = GetBackgroundPixelColorIndex(pattern, pixelRow % PatternSize, pixelCol % PatternSize);
+        var color = GetPaletteColor(paletteNumber: 0, colorIndex);
+        return color;
+    }
+
+    /// <summary>
+    /// Get the attribute table value for a given pixel position.
+    /// The attribute table determines which palette to use for each 2x2 tile area.
+    /// </summary>
+    private byte GetAttributeTableValue(int scanline, int cycle)
+    {
+        // Each attribute byte controls a 4x4 tile area (32x32 pixels)
+        int attributeX = (cycle / 8) / 4;
+        int attributeY = (scanline / 8) / 4;
+        int attributeIndex = attributeY * 8 + attributeX;
+
+        // Attribute table starts at offset 0x3C0 within the nametable (0x23C0 in PPU memory)
+        int attributeAddress = 0x2000 + 0x3C0 + attributeIndex;
+        var attributeByte = ReadMemory((ushort)attributeAddress);
+
+        // Determine which 2-bit value within the attribute byte to use
+        int quadrantX = ((cycle / 8) % 4) / 2;
+        int quadrantY = ((scanline / 8) % 4) / 2;
+        int quadrant = quadrantY * 2 + quadrantX;
+
+        // Extract the 2-bit palette number from the attribute byte
+        return (byte)((attributeByte >> (quadrant * 2)) & 0x03);
+    }
+
+    /// <summary>
+    /// Get a color from the palette RAM, converting the NES palette index to RGB.
+    /// Each palette has 4 colors.
+    /// </summary>
+    private Color GetPaletteColor(int paletteNumber, int colorIndex)
+    {
+        var paletteOffset = (paletteNumber * 4) + colorIndex;
+        var paletteIndex = _paletteRam[paletteOffset];
+        var color = Palette.Colors[paletteIndex];
+        return color;
+    }
+
+    /// <summary>
+    /// Bitwise zip of two bytes, at a given two-bit index
+    /// </summary>
+    internal static byte ZipBytes(byte lowByte, byte highByte, byte index)
+    {
+        // Get just one bit from the low byte
+        byte lowBit = (byte)(lowByte & (1 << index));
+        lowBit >>= index;
+
+        // Get just one bit from the high byte
+        byte highBit = (byte)(highByte & (1 << index));
+        highBit >>= index;
+        // Shift high bit left just once so we can combine it with the low bit
+        highBit <<= 1;
+
+        return (byte)(lowBit | highBit);
+    }
+
+    /// <summary>
+    /// Get the color index of a background pixel.
+    /// </summary>
+    /// <returns>
+    /// The color index into a single color palette. This is always a value of 0, 1, 2, or 3.
+    /// </returns>
+    private static byte GetBackgroundPixelColorIndex(
+        ReadOnlySpan<byte> pattern,
+        int pixelRow,
+        int pixelCol
+    )
+    {
+        // Get the 2-bit pixel value from the pattern
+        byte pixelValue = ZipBytes(pattern[pixelRow], pattern[pixelRow + 8], (byte)(7 - pixelCol));
+        return pixelValue;
     }
 }
