@@ -45,8 +45,8 @@ internal class EmulatorGame : Game
     {
         _display = new ScalableBufferedDisplay(
             _graphics.GraphicsDevice,
-            Ppu.DisplayWidth,
-            Ppu.DisplayHeight
+            Ppu.CyclesPerScanline,
+            Ppu.Scanlines
         );
         _patternTablesDisplay = new ScalableBufferedDisplay(
             _graphics.GraphicsDevice,
