@@ -339,20 +339,20 @@ public class Ppu : IMemoryListener
     /// </summary>
     private void Step()
     {
+        // The vblank flag is set at the start of vblank (scanline 241).
+        // Reading PPUSTATUS will return the current state of this flag and
+        // then clear it. If the vblank flag is not cleared by reading, it
+        // will be cleared automatically on dot 1 of the prerender
+        // scanline.
+        if (_scanline == VblankScanline && _cycle == 1)
+        {
+            VblankFlag = true;
+        }
+
         if (_cycle >= CyclesPerScanline)
         {
             _cycle = 0;
             _scanline += 1;
-
-            // The vblank flag is set at the start of vblank (scanline 241).
-            // Reading PPUSTATUS will return the current state of this flag and
-            // then clear it. If the vblank flag is not cleared by reading, it
-            // will be cleared automatically on dot 1 of the prerender
-            // scanline.
-            if (_scanline == VblankScanline)
-            {
-                VblankFlag = true;
-            }
 
             // VBlank is cleared on the first dot of scanline 261.
             if (_scanline == Scanlines - 1)
@@ -360,18 +360,18 @@ public class Ppu : IMemoryListener
                 VblankFlag = false;
             }
 
-            // Trigger NMI (non-maskable interrupt)
-            if (NmiEnabled && VblankFlag)
-            {
-                // We "read" the PPU status register, so we need to clear the VBlank flag.
-                VblankFlag = false;
-                NmiCallback?.Invoke();
-            }
-
             if (_scanline >= Scanlines)
             {
                 _scanline = 0;
             }
+        }
+
+        // Trigger NMI (non-maskable interrupt)
+        if (NmiEnabled && VblankFlag)
+        {
+            // We "read" the PPU status register, so we need to clear the VBlank flag.
+            VblankFlag = false;
+            NmiCallback?.Invoke();
         }
 
         if (_cycle < DisplayWidth && _scanline < DisplayHeight)
