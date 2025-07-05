@@ -34,13 +34,13 @@ public readonly record struct Instruction(
     /// Executes the instruction using the provided handler and addressing mode.
     /// </summary>
     /// <returns>
-    /// The total number of cycles the instruction takes, including any extra
-    /// cycles incurred by crossing page boundaries.
+    /// The number of extra cycles incurred by the instruction takes, for
+    /// example by crossing page boundaries.
     /// </returns>
     public int Execute()
     {
         var extraCycles = Handler(AddressingMode);
-        return Cycles + extraCycles;
+        return extraCycles;
     }
 
     /// <summary>

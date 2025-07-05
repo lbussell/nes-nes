@@ -71,9 +71,9 @@ internal class EmulatorGame : Game
         // running, nor does it know anything about what what we do with the
         // pixels. This class (EmulatorGame) handles all of the emulation
         // speed/synchronization, display buffering, etc.
-        _console = NesConsole.Create(
+        _console = new NesConsole(
             renderPixelCallback: DrawPixel,
-            onCpuInstructionCompleted: UpdateLogs
+            logCpuState: UpdateLogs
         );
 
         _enableLogging = enableLogging;

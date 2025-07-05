@@ -126,9 +126,9 @@ public static class MemoryRegions
     public const ushort PpuRegistersSize = 0x0008;
 
     /// <summary>
-    /// The exclusive end of the PPU registers
+    /// The inclusive end of the PPU registers
     /// </summary>
-    public const ushort PpuRegistersEnd = ApuIoRegisters;
+    public const ushort PpuRegistersEnd = ApuIoRegisters - 1;
 
     public const ushort ApuIoRegisters = 0x4000;
 

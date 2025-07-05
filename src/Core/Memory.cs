@@ -64,23 +64,33 @@ public class Memory : IMemory
     /// <inheritdoc/>
     public byte Read8(ushort address)
     {
+        byte value = 0;
+        bool wasHandled = false;
+
         foreach (IMemoryListener listener in _listeners)
         {
-            if (address >= listener.MemoryRange.Start && address < listener.MemoryRange.End)
+            if (address >= listener.MemoryRange.Start && address <= listener.MemoryRange.End)
             {
                 // If the listener handles this address, delegate the read to
                 // the listener. If the listener returned false, it hears the
                 // read but we'll continue to the next listener.
-                if (listener.ListenRead(address, out byte value))
+                if (listener.ListenRead(address, out byte readValue))
                 {
-                    return value;
+                    wasHandled = true;
+                    value = readValue;
                 }
             }
         }
 
-        // Fall back to old behavior. TODO: Remove this once other components
-        // are updated to implement IMemoryListener.
-        return Map(address);
+        // No listeners handled the read, so fall back to old behavior.
+        // TODO: Remove this once other components are updated to implement
+        // IMemoryListener.
+        if (!wasHandled)
+        {
+            value = Map(address);
+        }
+
+        return value;
     }
 
     /// <inheritdoc/>

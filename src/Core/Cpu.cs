@@ -11,12 +11,21 @@ public class Cpu
     private readonly IMemory _memory;
     private Registers _registers;
     private readonly CpuCallback? _logCpuState;
+    private readonly Action? _tickCallback;
 
-    public Cpu(Registers registers, IMemory memory, CpuCallback? logCpuState = null)
+    private int _cyclesThisInstruction;
+
+    public Cpu(
+        Registers registers,
+        IMemory memory,
+        CpuCallback? logCpuState = null,
+        Action? tickCallback = null
+    )
     {
         _registers = registers;
         _memory = memory;
         _logCpuState = logCpuState;
+        _tickCallback = tickCallback;
 
         _instructions = InitializeInstructions();
     }
@@ -39,7 +48,7 @@ public class Cpu
     public void Reset()
     {
         _registers = Registers.Initial;
-        _registers.PC = _memory.Read16(_registers.PC);
+        _registers.PC = Read16(_registers.PC);
         Cycles = 8;
     }
 
@@ -66,6 +75,7 @@ public class Cpu
         }
 
         // Load next instruction
+        StartInstruction();
         byte opcode = Fetch8();
 
         // Execute instruction
@@ -77,9 +87,21 @@ public class Cpu
             );
         }
 
-        // Return the number of cycles the instruction took to execute
-        var cyclesElapsed = instruction.Execute();
-        Cycles += cyclesElapsed;
+        var extraCycles = instruction.Execute();
+        for (int i = 0; i < extraCycles; i += 1)
+        {
+            Tick();
+        }
+
+        var cyclesElapsed = EndInstruction();
+
+        const int MinCycles = 2;
+        while (cyclesElapsed < MinCycles)
+        {
+            cyclesElapsed += 1;
+            Tick();
+        }
+
         return cyclesElapsed;
     }
 
@@ -123,7 +145,7 @@ public class Cpu
         _registers.SetFlag(Flags.InterruptDisable);
 
         // Load PC with the address in the NMI vector
-        _registers.PC = _memory.Read16(MemoryRegions.NmiVector);
+        _registers.PC = Read16(MemoryRegions.NmiVector);
 
         // All of that takes 7 cycles!
         return 7;
@@ -303,7 +325,7 @@ public class Cpu
         opcodes[0xF8] = new("SED", Implicit(() => _registers.SetFlag(Flags.DecimalMode)), AddressingMode.Implicit, 2);
         opcodes[0x78] = new("SEI", Implicit(() => _registers.SetFlag(Flags.InterruptDisable)), AddressingMode.Implicit, 2);
 
-        var sta = UseAddress(address => _memory[address] = _registers.A);
+        var sta = UseAddress(address => Write8(address, _registers.A));
         opcodes[0x85] = new("STA", sta, AddressingMode.ZeroPage, 3);
         opcodes[0x95] = new("STA", sta, AddressingMode.ZeroPageX, 4);
         opcodes[0x8D] = new("STA", sta, AddressingMode.Absolute, 4);
@@ -312,12 +334,12 @@ public class Cpu
         opcodes[0x81] = new("STA", sta, AddressingMode.IndirectX, 6);
         opcodes[0x91] = new("STA", sta, AddressingMode.IndirectY, 6);
 
-        var stx = UseAddress(address => _memory[address] = _registers.X);
+        var stx = UseAddress(address => Write8(address, _registers.X));
         opcodes[0x86] = new("STX", stx, AddressingMode.ZeroPage, 3);
         opcodes[0x96] = new("STX", stx, AddressingMode.ZeroPageY, 4);
         opcodes[0x8E] = new("STX", stx, AddressingMode.Absolute, 4);
 
-        var sty = UseAddress(address => _memory[address] = _registers.Y);
+        var sty = UseAddress(address => Write8(address, _registers.Y));
         opcodes[0x84] = new("STY", sty, AddressingMode.ZeroPage, 3);
         opcodes[0x94] = new("STY", sty, AddressingMode.ZeroPageX, 4);
         opcodes[0x8C] = new("STY", sty, AddressingMode.Absolute, 4);
@@ -560,9 +582,9 @@ public class Cpu
     /// </summary>
     private void Dec(ushort address)
     {
-        var value = _memory[address];
+        var value = Read8(address);
         var result = (byte)(value - 1);
-        _memory[address] = result;
+        Write8(address, result);
         _registers.SetZeroAndNegative(result);
     }
 
@@ -591,9 +613,9 @@ public class Cpu
     /// </summary>
     private void Inc(ushort address)
     {
-        byte value = _memory[address];
+        byte value = Read8(address);
         byte result = (byte)(value + 1);
-        _memory[address] = result;
+        Write8(address, result);
         _registers.SetZeroAndNegative(result);
     }
 
@@ -688,10 +710,10 @@ public class Cpu
     /// </summary>
     private void LsrMemory(ushort address)
     {
-        byte value = _memory[address];
+        byte value = Read8(address);
         _registers.SetFlag(Flags.Carry, (value & 0x01) != 0);
         byte result = (byte)(value >> 1);
-        _memory[address] = result;
+        Write8(address, result);
         _registers.SetZeroAndNegative(result);
         // TODO: Maybe ignore page cross penalty?
     }
@@ -761,7 +783,7 @@ public class Cpu
     /// </summary>
     private void RotateLeftMemory(ushort address)
     {
-        _memory[address] = RotateLeft(_memory[address]);
+        Write8(address, RotateLeft(Read8(address)));
     }
 
     /// <summary>
@@ -797,7 +819,7 @@ public class Cpu
     /// </summary>
     private void RotateRightMemory(ushort address)
     {
-        _memory[address] = RotateRight(_memory[address]);
+        Write8(address, RotateRight(Read8(address)));
     }
 
     /// <summary>
@@ -914,7 +936,7 @@ public class Cpu
         mode =>
         {
             var addressResult = GetAddress(mode);
-            var operand = _memory.Read8(addressResult.Address);
+            var operand = Read8(addressResult.Address);
             action(operand);
             return addressResult.ExtraCycles;
         };
@@ -1010,7 +1032,7 @@ public class Cpu
             byte lsb = _memory[lsbAddress];
             // Handle wrap-around for the second byte
             ushort msbAddress = (ushort)((lsbAddress & 0xFF00) + (byte)(lsbAddress + 1));
-            byte msb = _memory[msbAddress];
+            byte msb = Read8(msbAddress);
             ushort targetAddress = (ushort)((msb << 8) | lsb);
 
             return new AddressResult(targetAddress, 0);
@@ -1030,8 +1052,8 @@ public class Cpu
         // byte is at 0x00.
         ushort Read16ZeroPageWraparound(byte address)
         {
-            byte lsb = _memory.Read8(address);
-            byte msb = _memory.Read8((byte)(address + 1));
+            byte lsb = Read8(address);
+            byte msb = Read8((byte)(address + 1));
 
             return (ushort)((msb << 8) | lsb);
         }
@@ -1046,13 +1068,54 @@ public class Cpu
         }
     }
 
+    private byte Read8(ushort address)
+    {
+        var value = _memory.Read8(address);
+        Tick();
+        return value;
+    }
+
+    private ushort Read16(ushort address)
+    {
+        // Read two bytes from the specified address and combine them into a
+        // single 16-bit value.
+        byte lsb = Read8(address);
+        byte msb = Read8((ushort)(address + 1));
+        return (ushort)((msb << 8) | lsb);
+    }
+
+    private byte Write8(ushort address, byte value)
+    {
+        // Write a single byte to the specified address.
+        _memory.Write8(address, value);
+        Tick();
+        return value;
+    }
+
+    private void StartInstruction()
+    {
+        _cyclesThisInstruction = 0;
+    }
+
+    private int EndInstruction()
+    {
+        return _cyclesThisInstruction;
+    }
+
+    private void Tick()
+    {
+        Cycles += 1;
+        _cyclesThisInstruction += 1;
+        _tickCallback?.Invoke();
+    }
+
     /// <summary>
     /// Read a byte from memory at the current program counter, incrementing
     /// the program counter as appropriate.
     /// </summary>
     private byte Fetch8()
     {
-        var nextByte = _memory.Read8(_registers.PC);
+        var nextByte = Read8(_registers.PC);
         _registers.PC += 1;
         return nextByte;
     }
@@ -1063,7 +1126,7 @@ public class Cpu
     /// </summary>
     private ushort Fetch16()
     {
-        var nextWord = _memory.Read16(_registers.PC);
+        var nextWord = Read16(_registers.PC);
         _registers.PC += 2;
         return nextWord;
     }

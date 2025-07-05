@@ -3,16 +3,16 @@
 
 namespace NesNes.Core;
 
-public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
+public class NesConsole
 {
     public const decimal CpuCyclesPerFrame = 29780.5m;
     public const decimal CpuCyclesPerScanline = 113.667m;
     public const int ApproxCpuCyclesPerFrame = 29781;
     public const int ApproxCpuCyclesPerScanline = 113;
 
-    private readonly Cpu _cpu = cpu;
-    private readonly Ppu _ppu = ppu;
-    private readonly Memory _memory = memory;
+    private readonly Cpu _cpu;
+    private readonly Ppu _ppu;
+    private readonly Memory _memory;
     private CartridgeData? _cartridge = null;
 
     private int _ppuCyclesForThisScanline = 0;
@@ -21,23 +21,28 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
 
     public Ppu Ppu => _ppu;
 
+    public NesConsole(Cpu cpu, Ppu ppu, Memory memory)
+    {
+        _cpu = cpu;
+        _ppu = ppu;
+        _memory = memory;
+    }
+
     /// <summary>
     /// Create a new instance of <see cref="NesConsole"/>.
     /// </summary>
-    public static NesConsole Create(
+    public NesConsole(
         RenderPixel? renderPixelCallback = null,
-        CpuCallback? onCpuInstructionCompleted = null
+        CpuCallback? logCpuState = null
     )
     {
-        var ppu = new Ppu();
-        var memory = new Memory(listeners: [ppu]);
+        _ppu = new Ppu();
+        _memory = new Memory([_ppu]);
         var registers = Registers.Initial;
-        var cpu = new Cpu(registers, memory, onCpuInstructionCompleted);
+        _cpu = new Cpu(registers, _memory, logCpuState, () => Tick());
 
-        ppu.RenderPixelCallback = renderPixelCallback;
-        ppu.NmiCallback = cpu.QueueNonMaskableInterrupt;
-
-        return new NesConsole(cpu, ppu, memory);
+        _ppu.RenderPixelCallback = renderPixelCallback;
+        _ppu.NmiCallback = _cpu.QueueNonMaskableInterrupt;
     }
 
     public int CpuCycles => _cpu.Cycles;
@@ -57,9 +62,9 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
         _cpu.Reset();
 
         // The CPU spends a number of cycles during reset, so the PPU needs to
-        // catch up. The PPU also spends 3 extra cycles somewhere during reset,
-        // but who knows where that's from.
-        _ppu.Step(3 + _cpu.Cycles * Ppu.CyclesPerCpuCycle);
+        // catch up. The PPU also spends some extra cycles somewhere during
+        // reset, but who knows where that's from.
+        _ppu.Step(7 * Ppu.CyclesPerCpuCycle);
     }
 
     /// <summary>
@@ -81,7 +86,6 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     {
         var elapsedCpuCycles = _cpu.Step();
         var elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
-        _ppu.Step(elapsedPpuCycles);
 
         _ppuCyclesForThisScanline += elapsedPpuCycles;
         if (_ppuCyclesForThisScanline >= Ppu.CyclesPerScanline)
@@ -104,7 +108,6 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
             // Run the PPU for the number of cycles we calculated to catch up
             // with the CPU.
             int elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
-            _ppu.Step(elapsedPpuCycles);
             _ppuCyclesForThisScanline += elapsedPpuCycles;
         }
 
@@ -112,5 +115,10 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
         // number of cycles. If we did any extra work, we should make sure not
         // to count that towards the next scanline.
         _ppuCyclesForThisScanline -= Ppu.CyclesPerScanline;
+    }
+
+    private void Tick(int cycles = 1)
+    {
+        _ppu.Step(cycles * Ppu.CyclesPerCpuCycle);
     }
 }
