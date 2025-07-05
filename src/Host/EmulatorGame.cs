@@ -224,8 +224,9 @@ internal class EmulatorGame : Game
 
     private string GetLogText(Registers registers)
     {
+        var scanline = _console.Ppu.Scanline == 261 ? -1 : _console.Ppu.Scanline;
         return $"{registers.PC:X4}  CYC:{_console.CpuCycles,-8} {registers}"
-            + $" Scanline:{_console.Ppu.Scanline,-3} H:{_console.Ppu.Cycle,-3}";
+            + $" Scanline:{scanline,-3} H:{_console.Ppu.Cycle,-3}";
     }
 
     private void UpdateLogs(ushort PC, Registers registers)
