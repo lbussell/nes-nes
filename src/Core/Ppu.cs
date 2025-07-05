@@ -219,12 +219,17 @@ public class Ppu : IMemoryListener
         switch (address)
         {
             case PpuStatus:
+                // The lower 5 bits of the status register are unused. These
+                // have been set to match mesen. No games should rely on this
+                // behavior, but it is more accurate to the hardware.
+                byte value = (byte)(_registers[address] | 0x10);
+
+                // Reading from the status register resets the address latch
+                // and clears the vertical blank flag.
                 _addressRegister.ResetLatch();
-                // Reading from the status register clears the vertical blank flag.
                 VblankFlag = false;
-                // Temporary hacky hack to get past the part where we're getting stuck:
-                VblankFlag = true;
-                return _registers[address];
+
+                return value;
             case PpuData:
                 var result = _dataBuffer;
                 _dataBuffer = ReadMemory(_addressRegister.Value);
@@ -357,23 +362,6 @@ public class Ppu : IMemoryListener
             VblankFlag = true;
         }
 
-        if (_cycle >= CyclesPerScanline)
-        {
-            _cycle = 0;
-            _scanline += 1;
-
-            // VBlank is cleared on the first dot of scanline 261.
-            if (_scanline == Scanlines - 1)
-            {
-                VblankFlag = false;
-            }
-
-            if (_scanline >= Scanlines)
-            {
-                _scanline = 0;
-            }
-        }
-
         // Trigger NMI (non-maskable interrupt)
         if (NmiEnabled && VblankFlag)
         {
@@ -398,6 +386,22 @@ public class Ppu : IMemoryListener
         }
 
         _cycle += 1;
+        if (_cycle >= CyclesPerScanline)
+        {
+            _cycle = 0;
+            _scanline += 1;
+
+            // VBlank is cleared on the first dot of scanline 261.
+            if (_scanline == Scanlines - 1)
+            {
+                VblankFlag = false;
+            }
+
+            if (_scanline >= Scanlines)
+            {
+                _scanline = 0;
+            }
+        }
     }
 
     /// <summary>
