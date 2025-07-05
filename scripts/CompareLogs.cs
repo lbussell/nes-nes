@@ -33,7 +33,7 @@ foreach (var (index, expected, actual) in comparisonLines)
     var expectedComparison = expected[..69];
     if (Differs(expectedComparison.Trim(), actual.Trim(), out var diffIndex))
     {
-        var diffString = new string(' ', diffIndex);
+        var diffString = new string(' ', diffIndex - 1);
 
         var previousLines = expectedLines[Math.Max(0, index - 5)..index];
         Console.WriteLine(
