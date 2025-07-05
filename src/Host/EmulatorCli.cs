@@ -13,7 +13,7 @@ internal class EmulatorCli
     /// </summary>
     /// <param name="rom">Path to NES ROM file.</param>
     [Command("")]
-    public async Task Start(string rom)
+    public async Task Start(string rom, string? logFile = null, int? logUntil = null)
     {
         var romData = await File.ReadAllBytesAsync(rom);
         var cartridge = CartridgeData.FromBytes(romData);
@@ -24,9 +24,18 @@ internal class EmulatorCli
             """
         );
 
-        using var game = new EmulatorGame(cartridge);
+        using var game = new EmulatorGame(
+            cartridge,
+            enableLogging: logFile is not null,
+            runUntilCpuCycle: logUntil
+        );
         {
             game.Run();
+            if (logFile is not null)
+            {
+                WriteLine($"Writing log to {logFile}");
+                await File.WriteAllTextAsync(logFile, game.TextLog);
+            }
         }
     }
 }

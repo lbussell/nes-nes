@@ -54,7 +54,24 @@ public record struct Registers
 
     public override readonly string ToString()
     {
-        return $"A:{A:X2} X:{X:X2} Y:{Y:X2} P:{(byte)P:X2} SP:{SP:X2} PC:{PC:X4}";
+        return $"A:{A:X2} X:{X:X2} Y:{Y:X2} SP:{SP:X2} P:{GetFlagsString()}";
+    }
+
+    /// <summary>
+    /// Returns the processor status flags as a formatted string in the format "nv--dIZc".
+    /// Capital letters indicate set flags, lowercase letters indicate unset flags.
+    /// </summary>
+    /// <returns>A string representation of the flags where each character represents a specific flag.</returns>
+    public readonly string GetFlagsString()
+    {
+        var n = P.HasFlag(Flags.Negative) ? 'N' : 'n';
+        var v = P.HasFlag(Flags.Overflow) ? 'V' : 'v';
+        var d = P.HasFlag(Flags.DecimalMode) ? 'D' : 'd';
+        var i = P.HasFlag(Flags.InterruptDisable) ? 'I' : 'i';
+        var z = P.HasFlag(Flags.Zero) ? 'Z' : 'z';
+        var c = P.HasFlag(Flags.Carry) ? 'C' : 'c';
+
+        return $"{n}{v}--{d}{i}{z}{c}";
     }
 
     public void Reset()

@@ -8,6 +8,7 @@ using NesNes.Host.UI;
 using Color = Microsoft.Xna.Framework.Color;
 using Myra;
 using Myra.Graphics2D.UI;
+using System.Text;
 
 namespace NesNes.Host;
 
@@ -22,6 +23,11 @@ internal class EmulatorGame : Game
     private ScalableBufferedDisplay? _nameTablesDisplay;
     private ScalableBufferedDisplay? _patternTablesDisplay;
 
+    private readonly StringBuilder _textLog = new StringBuilder();
+    private readonly int? _runUntilCpuCycle;
+    private bool _emulationIsRunning;
+    private bool _enableLogging;
+
     MenuItem? _startButton;
     MenuItem? _pauseButton;
     MenuItem? _resetButton;
@@ -31,9 +37,21 @@ internal class EmulatorGame : Game
     MenuItem? _stepFrameButton;
     ListView? _cpuLogView;
 
-    private bool _emulationIsRunning;
-
-    public EmulatorGame(CartridgeData cartridge)
+    /// <summary>
+    /// Creates a new instance of the emulator game.
+    /// </summary>
+    /// <param name="cartridge">
+    /// The game cartridge that will be loaded into the console.
+    /// </param>
+    /// <param name="runUntilCpuCycle">
+    /// If this is specified, then the emulator will start immediately and exit
+    /// after the CPU has executed at least this many cycles.
+    /// </param>
+    public EmulatorGame(
+        CartridgeData cartridge,
+        bool enableLogging = false,
+        int? runUntilCpuCycle = null
+    )
     {
         // MonoGame stuff
         Content.RootDirectory = "Content";
@@ -55,9 +73,18 @@ internal class EmulatorGame : Game
         // speed/synchronization, display buffering, etc.
         _console = NesConsole.Create(
             renderPixelCallback: DrawPixel,
-            onCpuInstructionCompleted: LogCpuStateForDebugging
+            onCpuInstructionCompleted: UpdateLogs
         );
+
+        _enableLogging = enableLogging;
+        _runUntilCpuCycle = runUntilCpuCycle;
+        if (_runUntilCpuCycle is not null)
+        {
+            _emulationIsRunning = true;
+        }
     }
+
+    public string TextLog => _textLog.ToString();
 
     protected override void LoadContent()
     {
@@ -165,6 +192,11 @@ internal class EmulatorGame : Game
                 for (int i = 0; i < Ppu.Scanlines; i += 1)
                 {
                     _console.StepScanline();
+
+                    if (_runUntilCpuCycle is not null && _console.CpuCycles >= _runUntilCpuCycle)
+                    {
+                        Exit();
+                    }
                 }
             }
 
@@ -189,29 +221,38 @@ internal class EmulatorGame : Game
         base.Draw(gameTime);
     }
 
-    private void LogCpuStateForDebugging(ushort PC, Registers registers)
+    private string GetLogText(Registers registers)
     {
-        // Only log CPU state if we are debugging, not running at full speed.
-        if (_emulationIsRunning || _cpuLogView is null)
+        return $"{registers.PC:X4}  CYC:{_console.CpuCycles,-8} {registers}"
+            + $" Scanline:{_console.Ppu.Scanline,-3} H:{_console.Ppu.Cycle,-3}";
+    }
+
+    private void UpdateLogs(ushort PC, Registers registers)
+    {
+        string? logLine = null;
+
+        if (_enableLogging)
         {
-            return;
+            logLine = GetLogText(registers);
+            _textLog.AppendLine(logLine);
         }
 
-        _cpuLogView.Widgets.Add(
-            new Label
-            {
-                Text = $"CYC:{_console.CpuCycles}"
-                    + $" PC:{PC:X4}"
-                    + $" A:{registers.A:X2}"
-                    + $" X:{registers.X:X2}"
-                    + $" Y:{registers.Y:X2}"
-                    + $" P: {(byte)registers.P:X2}"
-                    + $" SP:{registers.SP:X2}"
-            }
-        );
+        // Only update debugger UI when we are debugging and when the UI is
+        // loaded
+        if (!_emulationIsRunning && _cpuLogView is not null)
+        {
+            // Don't recompute the log line if it was already computed
+            logLine ??= GetLogText(registers);
+            UpdateDebuggerUI(logLine);
+        }
+    }
+
+    private void UpdateDebuggerUI(string logLine)
+    {
+        _cpuLogView?.Widgets.Add(new Label { Text = logLine });
 
         // Focus the most recent log entry
-        _cpuLogView.SelectedIndex = _cpuLogView.Widgets.Count - 1;
+        _cpuLogView?.SelectedIndex = _cpuLogView.Widgets.Count - 1;
     }
 
     private void DrawPixel(ushort x, ushort y, byte r, byte g, byte b)

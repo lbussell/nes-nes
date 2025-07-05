@@ -111,10 +111,18 @@ public class Ppu : IMemoryListener
     // Data buffer used for delaying reads of PPU memory
     private byte _dataBuffer;
 
+    /// <summary>
+    /// Creates a new instance of the PPU.
+    /// </summary>
+    /// <param name="initialNametables"></param>
     public Ppu(IMemory? initialNametables = null)
     {
         _nameTables = initialNametables ?? new SimpleMemory(2 * NameTableSize);
     }
+
+    public int Scanline => _scanline;
+
+    public int Cycle => _cycle;
 
     public ReadOnlySpan<byte> PatternTables => _patternTables;
 
