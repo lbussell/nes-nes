@@ -10,17 +10,18 @@ public class Cpu
     private readonly Instruction[] _instructions;
     private readonly IMemory _memory;
     private Registers _registers;
-    private readonly CpuCallback? _onInstructionCompleted;
-    private int _totalCyclesElapsed = 0;
+    private readonly CpuCallback? _logCpuState;
 
-    public Cpu(Registers registers, IMemory memory, CpuCallback? onInstructionCompleted = null)
+    public Cpu(Registers registers, IMemory memory, CpuCallback? logCpuState = null)
     {
         _registers = registers;
         _memory = memory;
-        _onInstructionCompleted = onInstructionCompleted;
+        _logCpuState = logCpuState;
 
         _instructions = InitializeInstructions();
     }
+
+    public int Cycles { get; private set; }
 
     public Registers Registers
     {
@@ -38,7 +39,8 @@ public class Cpu
     public void Reset()
     {
         _registers = Registers.Initial;
-        _registers.PC = _memory.Read16(MemoryRegions.ResetVector);
+        _registers.PC = _memory.Read16(_registers.PC);
+        Cycles = 8;
     }
 
     /// <summary>
@@ -52,12 +54,16 @@ public class Cpu
     /// </exception>
     public int Step()
     {
+        // Run callback function if it was provided
+        if (_logCpuState is not null)
+        {
+            _logCpuState(_registers.PC, _registers);
+        }
+
         if (_nmiPending)
         {
             return NonMaskableInterrupt();
         }
-
-        var oldPC = _registers.PC;
 
         // Load next instruction
         byte opcode = Fetch8();
@@ -69,18 +75,11 @@ public class Cpu
             throw new InvalidOperationException(
                 $"Unknown opcode: {opcode:X2} at PC: {_registers.PC - 1:X4}"
             );
-            return 5;
-        }
-
-        // Run callback function if it was provided
-        if (_onInstructionCompleted is not null)
-        {
-            _onInstructionCompleted(oldPC, _registers);
         }
 
         // Return the number of cycles the instruction took to execute
         var cyclesElapsed = instruction.Execute();
-        _totalCyclesElapsed += cyclesElapsed;
+        Cycles += cyclesElapsed;
         return cyclesElapsed;
     }
 

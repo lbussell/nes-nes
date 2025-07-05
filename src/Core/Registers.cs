@@ -76,12 +76,17 @@ public record struct Registers
 
     public void Reset()
     {
-        PC = 0xC000;
-        SP = 0xFD;
+        // See https://www.nesdev.org/wiki/CPU_power_up_state#CPU
+        PC = MemoryRegions.ResetVector;
+
+        SP = 0xFF;
+        SP -= 0x03;
+
         A = 0x00;
         X = 0x00;
         Y = 0x00;
-        P = Flags.Unused | Flags.InterruptDisable;
+
+        P = Flags.Unused | Flags.InterruptDisable | Flags.Zero;
     }
 
     public static Registers Initial

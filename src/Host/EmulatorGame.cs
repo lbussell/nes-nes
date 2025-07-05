@@ -196,6 +196,7 @@ internal class EmulatorGame : Game
                     if (_runUntilCpuCycle is not null && _console.CpuCycles >= _runUntilCpuCycle)
                     {
                         Exit();
+                        return;
                     }
                 }
             }

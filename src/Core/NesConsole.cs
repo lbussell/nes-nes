@@ -15,9 +15,7 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     private readonly Memory _memory = memory;
     private CartridgeData? _cartridge = null;
 
-    private int _cpuCycles = 0;
     private int _ppuCyclesForThisScanline = 0;
-    private int _cpuCyclesSinceLastScanline = 0;
 
     public Cpu Cpu => _cpu;
 
@@ -42,7 +40,7 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
         return new NesConsole(cpu, ppu, memory);
     }
 
-    public int CpuCycles => _cpuCycles;
+    public int CpuCycles => _cpu.Cycles;
 
     public bool HasCartridge => _cartridge is not null;
 
@@ -57,6 +55,11 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     public void Reset()
     {
         _cpu.Reset();
+
+        // The CPU spends a number of cycles during reset, so the PPU needs to
+        // catch up. The PPU also spends 3 extra cycles somewhere during reset,
+        // but who knows where that's from.
+        _ppu.Step(3 + _cpu.Cycles * Ppu.CyclesPerCpuCycle);
     }
 
     /// <summary>
@@ -68,7 +71,6 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     public int StepCpuOnly()
     {
         var elapsedCycles = _cpu.Step();
-        _cpuCycles += elapsedCycles;
         return elapsedCycles;
     }
 
@@ -77,7 +79,7 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     /// </summary>
     public void StepInstruction()
     {
-        var elapsedCpuCycles = StepCpuOnly();
+        var elapsedCpuCycles = _cpu.Step();
         var elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
         _ppu.Step(elapsedPpuCycles);
 
@@ -96,7 +98,7 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
 
         while (_ppuCyclesForThisScanline < Ppu.CyclesPerScanline)
         {
-            int elapsedCpuCycles = StepCpuOnly();
+            int elapsedCpuCycles = _cpu.Step();
             cpuCyclesSinceLastScanline += elapsedCpuCycles;
 
             // Run the PPU for the number of cycles we calculated to catch up

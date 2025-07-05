@@ -34,7 +34,7 @@ internal class EmulatorCli
             if (logFile is not null)
             {
                 WriteLine($"Writing log to {logFile}");
-                await File.WriteAllTextAsync(logFile, game.TextLog);
+                File.WriteAllText(logFile, game.TextLog);
             }
         }
     }
