@@ -14,7 +14,7 @@ var actualLines = await File.ReadAllLinesAsync(actualFile);
 if (expectedLines.Length != actualLines.Length)
 {
     Console.WriteLine(
-        $"Warning: {Path.GetFileName(expectedFile)} has {expectedLines.Length} lines, while"
+        $"{Environment.NewLine}Warning: {Path.GetFileName(expectedFile)} has {expectedLines.Length} lines, while"
         + $" {Path.GetFileName(actualFile)} has {actualLines.Length} lines."
     );
 }
@@ -33,23 +33,29 @@ foreach (var (index, expected, actual) in comparisonLines)
     var expectedComparison = expected[..69];
     if (Differs(expectedComparison.Trim(), actual.Trim(), out var diffIndex))
     {
+        var diffString = new string(' ', diffIndex);
+
+        var previousLines = expectedLines[Math.Max(0, index - 5)..index];
         Console.WriteLine(
             $"""
-            Mismatch at line {index}, character {diffIndex}:
+
+            ...
+            {string.Join(Environment.NewLine, previousLines)}
+
+            """);
+
+        Console.WriteLine(
+            $"""
+            Mismatch at line {index}, character {diffIndex + 1}:
+                        {diffString}v
               Expected: {expected}
               Actual:   {actual}
-                        {new string(' ', diffIndex)}^
+                        {diffString}^
             """
         );
+
         return 1;
     }
-
-    Console.WriteLine(
-        $"""
-        Line {index} OK:
-          Expected: {expected}
-          Actual:   {actual}
-        """);
 }
 
 return 0;
