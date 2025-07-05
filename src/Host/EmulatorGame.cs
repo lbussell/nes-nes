@@ -29,7 +29,7 @@ internal class EmulatorGame : Game
     MenuItem? _stepPixelButton;
     MenuItem? _stepScanlineButton;
     MenuItem? _stepFrameButton;
-    ListView _cpuLogView;
+    ListView? _cpuLogView;
 
     private bool _emulationIsRunning;
 
@@ -53,7 +53,10 @@ internal class EmulatorGame : Game
         // running, nor does it know anything about what what we do with the
         // pixels. This class (EmulatorGame) handles all of the emulation
         // speed/synchronization, display buffering, etc.
-        _console = NesConsole.Create(renderPixelCallback: DrawPixel);
+        _console = NesConsole.Create(
+            renderPixelCallback: DrawPixel,
+            onCpuInstructionCompleted: LogCpuStateForDebugging
+        );
     }
 
     protected override void LoadContent()
@@ -66,59 +69,37 @@ internal class EmulatorGame : Game
 
         var debuggerMenu = _myraDesktop.Root.FindChildById<Menu>("emulation");
         _startButton = debuggerMenu.FindMenuItemById("start");
-        _startButton.Enabled = !_emulationIsRunning;
-        _startButton.Selected += (_, __) => Start();
+        _startButton.Selected += (_, __) =>
+        {
+            _emulationIsRunning = true;
+            UpdateButtonStatus();
+        };
 
         _pauseButton = debuggerMenu.FindMenuItemById("pause");
-        _pauseButton.Enabled = _emulationIsRunning;
-        _pauseButton.Selected += (_, __) => Pause();
+        _pauseButton.Selected += (_, __) =>
+        {
+            _emulationIsRunning = false;
+            UpdateButtonStatus();
+        };
 
         _resetButton = debuggerMenu.FindMenuItemById("reset");
-        _resetButton.Enabled = true;
-        _resetButton.Selected += (_, __) => Reset();
+        _resetButton.Selected += (_, __) => _console.Reset();
 
         var stepMenu = _myraDesktop.Root.FindChildById<Menu>("stepBy");
         _stepInstructionButton = stepMenu.FindMenuItemById("stepInstruction");
-        _stepInstructionButton.Enabled = !_emulationIsRunning;
-
-        _stepPixelButton = stepMenu.FindMenuItemById("stepPixel");
-        _stepPixelButton.Enabled = !_emulationIsRunning;
+        _stepInstructionButton.Selected += (_, __) => _console.StepInstruction();
 
         _stepScanlineButton = stepMenu.FindMenuItemById("stepScanline");
-        _stepScanlineButton.Enabled = !_emulationIsRunning;
+        _stepScanlineButton.Selected += (_, __) => _console.StepScanline();
 
+        _stepPixelButton = stepMenu.FindMenuItemById("stepPixel");
         _stepFrameButton = stepMenu.FindMenuItemById("stepFrame");
-        _stepFrameButton.Enabled = !_emulationIsRunning;
+
+        _cpuLogView = _myraDesktop.Root.FindChildById<ListView>("log");
+
+        UpdateButtonStatus();
 
         base.LoadContent();
-    }
-
-    /// <summary>
-    /// Start the emulation, if it is currently paused.
-    /// </summary>
-    private void Start()
-    {
-        _emulationIsRunning = true;
-        UpdateButtonStatus();
-    }
-
-    /// <summary>
-    /// Pauses emulation if it is currently running.
-    /// </summary>
-    private void Pause()
-    {
-        _emulationIsRunning = false;
-        UpdateButtonStatus();
-    }
-
-    /// <summary>
-    /// Resets the game console to its initial state and restarts the game.
-    /// This should not change whether or not the emulation is currently paused
-    /// or running.
-    /// </summary>
-    private void Reset()
-    {
-        _console.Reset();
     }
 
     /// <summary>
@@ -206,6 +187,31 @@ internal class EmulatorGame : Game
         _myraDesktop?.Render();
 
         base.Draw(gameTime);
+    }
+
+    private void LogCpuStateForDebugging(ushort PC, Registers registers)
+    {
+        // Only log CPU state if we are debugging, not running at full speed.
+        if (_emulationIsRunning || _cpuLogView is null)
+        {
+            return;
+        }
+
+        _cpuLogView.Widgets.Add(
+            new Label
+            {
+                Text = $"CYC:{_console.CpuCycles}"
+                    + $" PC:{PC:X4}"
+                    + $" A:{registers.A:X2}"
+                    + $" X:{registers.X:X2}"
+                    + $" Y:{registers.Y:X2}"
+                    + $" P: {(byte)registers.P:X2}"
+                    + $" SP:{registers.SP:X2}"
+            }
+        );
+
+        // Focus the most recent log entry
+        _cpuLogView.SelectedIndex = _cpuLogView.Widgets.Count - 1;
     }
 
     private void DrawPixel(ushort x, ushort y, byte r, byte g, byte b)

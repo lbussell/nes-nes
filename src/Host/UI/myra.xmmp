@@ -3,14 +3,14 @@
   <VerticalStackPanel Spacing="4" VerticalAlignment="Bottom" Height="200" Padding="4">
     <HorizontalStackPanel Spacing="4">
       <Label Text="Emulation" />
-      <HorizontalMenu MouseCursor="Hand" Id="emulation" >
+      <HorizontalMenu MouseCursor="Hand" Id="emulation">
         <MenuItem Text="Start" Id="start" />
         <MenuItem Text="Pause" Id="pause" />
         <MenuSeparator />
         <MenuItem Text="Reset" Id="reset" />
       </HorizontalMenu>
       <Label Text="Step by" />
-      <HorizontalMenu MouseCursor="Hand" Id="stepBy" >
+      <HorizontalMenu MouseCursor="Hand" Id="stepBy">
         <MenuItem Text="Instruction" Id="stepInstruction" />
         <MenuSeparator />
         <MenuItem Text="Pixel" Id="stepPixel" />
@@ -18,6 +18,6 @@
         <MenuItem Text="Frame" Id="stepFrame" />
       </HorizontalMenu>
     </HorizontalStackPanel>
-    <ListView HorizontalAlignment="Stretch" VerticalAlignment="Stretch" StackPanel.ProportionType="Fill" />
+    <ListView HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Id="log" StackPanel.ProportionType="Fill" />
   </VerticalStackPanel>
 </Project>

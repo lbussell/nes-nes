@@ -50,7 +50,7 @@ public class NesTest
         // fail immediately.
         for (int i = 0; i < StoppingPoint - 1; i += 1)
         {
-            _cpuCycles += console.StepCpu();
+            _cpuCycles += console.StepCpuOnly();
 
             _log.Last()
                 .ShouldBe(

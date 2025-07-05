@@ -60,16 +60,34 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
     }
 
     /// <summary>
-    /// Executes one CPU instruction.
+    /// Executes one CPU instruction without doing anything with the PPU.
     /// </summary>
     /// <returns>
     /// The number of CPU cycles elapsed. Most instructions take 2-7 cycles.
     /// </returns>
-    public int StepCpu()
+    public int StepCpuOnly()
     {
         var elapsedCycles = _cpu.Step();
         _cpuCycles += elapsedCycles;
         return elapsedCycles;
+    }
+
+    /// <summary>
+    /// Executes one CPU instruction and runs the PPU to catch up.
+    /// </summary>
+    public void StepInstruction()
+    {
+        var elapsedCpuCycles = StepCpuOnly();
+        var elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
+        _ppu.Step(elapsedPpuCycles);
+
+        _ppuCyclesForThisScanline += elapsedPpuCycles;
+        if (_ppuCyclesForThisScanline >= Ppu.CyclesPerScanline)
+        {
+            // We have completed a scanline, so we should reset the cycle count
+            // for the next scanline.
+            _ppuCyclesForThisScanline -= Ppu.CyclesPerScanline;
+        }
     }
 
     public void StepScanline()
@@ -78,8 +96,7 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
 
         while (_ppuCyclesForThisScanline < Ppu.CyclesPerScanline)
         {
-            int elapsedCpuCycles = StepCpu();
-            _cpuCycles += elapsedCpuCycles;
+            int elapsedCpuCycles = StepCpuOnly();
             cpuCyclesSinceLastScanline += elapsedCpuCycles;
 
             // Run the PPU for the number of cycles we calculated to catch up
@@ -88,8 +105,6 @@ public class NesConsole(Cpu cpu, Ppu ppu, Memory memory)
             _ppu.Step(elapsedPpuCycles);
             _ppuCyclesForThisScanline += elapsedPpuCycles;
         }
-
-        _cpuCycles += cpuCyclesSinceLastScanline;
 
         // We completed one scanline, but we may have over-shot the target
         // number of cycles. If we did any extra work, we should make sure not
