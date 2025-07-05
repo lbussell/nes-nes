@@ -30,20 +30,53 @@ foreach (var (index, expected, actual) in comparisonLines)
     // We know that our log format is exactly 68 characters long. By cutting
     // off the expected log here, we can add extra info to the output that can
     // help us debug.
-    var expectedComparison = expected[..68];
-    if (expectedComparison.Trim() != actual.Trim())
+    var expectedComparison = expected[..69];
+    if (Differs(expectedComparison.Trim(), actual.Trim(), out var diffIndex))
     {
         Console.WriteLine(
             $"""
-            Mismatch at line {index}:
-            Expected: {expected}
-            Actual:   {actual}
+            Mismatch at line {index}, character {diffIndex}:
+              Expected: {expected}
+              Actual:   {actual}
+                        {new string(' ', diffIndex)}^
             """
         );
         return 1;
     }
 
-    Console.WriteLine($"Line {index} OK: {expected}");
+    Console.WriteLine(
+        $"""
+        Line {index} OK:
+          Expected: {expected}
+          Actual:   {actual}
+        """);
 }
 
 return 0;
+
+
+// Return the zero-based index of the first difference between two strings.
+static bool Differs(string expected, string actual, out int index)
+{
+    var expectedSpan = expected.AsSpan();
+    var actualSpan = actual.AsSpan();
+
+    if (expectedSpan.Length != actualSpan.Length)
+    {
+        index = Math.Min(expectedSpan.Length, actualSpan.Length) + 1;
+        return true;
+    }
+
+    for (int i = 0; i < Math.Min(expectedSpan.Length, actualSpan.Length); i++)
+    {
+        if (expectedSpan[i] != actualSpan[i])
+        {
+            index = i + 1;
+            return true;
+        }
+    }
+
+    // No differences found
+    index = -1;
+    return false;
+}
