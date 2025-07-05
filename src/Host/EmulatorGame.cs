@@ -4,7 +4,10 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using NesNes.Core;
+using NesNes.Host.UI;
 using Color = Microsoft.Xna.Framework.Color;
+using Myra;
+using Myra.Graphics2D.UI;
 
 namespace NesNes.Host;
 
@@ -13,10 +16,22 @@ internal class EmulatorGame : Game
     private readonly GraphicsDeviceManager _graphics;
     private readonly CartridgeData _cartridge;
     private readonly NesConsole _console;
+    private Desktop? _myraDesktop;
 
     private ScalableBufferedDisplay? _display;
     private ScalableBufferedDisplay? _nameTablesDisplay;
     private ScalableBufferedDisplay? _patternTablesDisplay;
+
+    MenuItem? _startButton;
+    MenuItem? _pauseButton;
+    MenuItem? _resetButton;
+    MenuItem? _stepInstructionButton;
+    MenuItem? _stepPixelButton;
+    MenuItem? _stepScanlineButton;
+    MenuItem? _stepFrameButton;
+    ListView _cpuLogView;
+
+    private bool _emulationIsRunning;
 
     public EmulatorGame(CartridgeData cartridge)
     {
@@ -41,6 +56,87 @@ internal class EmulatorGame : Game
         _console = NesConsole.Create(renderPixelCallback: DrawPixel);
     }
 
+    protected override void LoadContent()
+    {
+        MyraEnvironment.Game = this;
+        _myraDesktop = new Desktop
+        {
+            Root = new DebuggerUI()
+        };
+
+        var debuggerMenu = _myraDesktop.Root.FindChildById<Menu>("emulation");
+        _startButton = debuggerMenu.FindMenuItemById("start");
+        _startButton.Enabled = !_emulationIsRunning;
+        _startButton.Selected += (_, __) => Start();
+
+        _pauseButton = debuggerMenu.FindMenuItemById("pause");
+        _pauseButton.Enabled = _emulationIsRunning;
+        _pauseButton.Selected += (_, __) => Pause();
+
+        _resetButton = debuggerMenu.FindMenuItemById("reset");
+        _resetButton.Enabled = true;
+        _resetButton.Selected += (_, __) => Reset();
+
+        var stepMenu = _myraDesktop.Root.FindChildById<Menu>("stepBy");
+        _stepInstructionButton = stepMenu.FindMenuItemById("stepInstruction");
+        _stepInstructionButton.Enabled = !_emulationIsRunning;
+
+        _stepPixelButton = stepMenu.FindMenuItemById("stepPixel");
+        _stepPixelButton.Enabled = !_emulationIsRunning;
+
+        _stepScanlineButton = stepMenu.FindMenuItemById("stepScanline");
+        _stepScanlineButton.Enabled = !_emulationIsRunning;
+
+        _stepFrameButton = stepMenu.FindMenuItemById("stepFrame");
+        _stepFrameButton.Enabled = !_emulationIsRunning;
+
+        base.LoadContent();
+    }
+
+    /// <summary>
+    /// Start the emulation, if it is currently paused.
+    /// </summary>
+    private void Start()
+    {
+        _emulationIsRunning = true;
+        UpdateButtonStatus();
+    }
+
+    /// <summary>
+    /// Pauses emulation if it is currently running.
+    /// </summary>
+    private void Pause()
+    {
+        _emulationIsRunning = false;
+        UpdateButtonStatus();
+    }
+
+    /// <summary>
+    /// Resets the game console to its initial state and restarts the game.
+    /// This should not change whether or not the emulation is currently paused
+    /// or running.
+    /// </summary>
+    private void Reset()
+    {
+        _console.Reset();
+    }
+
+    /// <summary>
+    /// Update the enabled/disabled status of all debugger control buttons
+    /// based on whether the emulation is currently running.
+    /// </summary>
+    private void UpdateButtonStatus()
+    {
+        _pauseButton?.Enabled = _emulationIsRunning;
+
+        _startButton?.Enabled = !_emulationIsRunning;
+        _stepInstructionButton?.Enabled = !_emulationIsRunning;
+        _stepPixelButton?.Enabled = !_emulationIsRunning;
+        _stepScanlineButton?.Enabled = !_emulationIsRunning;
+        _stepFrameButton?.Enabled = !_emulationIsRunning;
+    }
+
+    /// <inheritdoc/>
     protected override void Initialize()
     {
         _display = new ScalableBufferedDisplay(
@@ -68,6 +164,7 @@ internal class EmulatorGame : Game
         base.Initialize();
     }
 
+    /// <inheritdoc/>
     protected override void Update(GameTime gameTime)
     {
         if (
@@ -78,33 +175,35 @@ internal class EmulatorGame : Game
             Exit();
         }
 
-        // Draw one frame per update. By default updates are at 60hz. Later,
-        // this should synchronize to audio.
-        if (_display is not null && _console.HasCartridge)
+        if (_emulationIsRunning)
         {
-            for (int i = 0; i < Ppu.Scanlines; i += 1)
+            // Draw one frame per update. By default updates are at 60hz. Later,
+            // this should synchronize to audio.
+            if (_display is not null && _console.HasCartridge)
             {
-                _console.StepScanline();
+                for (int i = 0; i < Ppu.Scanlines; i += 1)
+                {
+                    _console.StepScanline();
+                }
             }
-        }
 
-        UpdatePatternTablesDisplay();
+            UpdatePatternTablesDisplay();
+        }
 
         base.Update(gameTime);
     }
 
+    /// <inheritdoc/>
     protected override void Draw(GameTime gameTime)
     {
-        // _display?.Clear(Color.Blue);
-        // _leftPatternTable?.Clear(Color.BlueViolet);
-        // _nameTablesDisplay?.Clear(Color.DarkGoldenrod);
-
         if (_console.HasCartridge)
         {
             _display?.Render();
             _patternTablesDisplay?.Render();
             _nameTablesDisplay?.Render();
         }
+
+        _myraDesktop?.Render();
 
         base.Draw(gameTime);
     }
@@ -113,11 +212,6 @@ internal class EmulatorGame : Game
     {
         _display?.SetPixel(x, y, new Color(r, g, b));
     }
-
-    /// <summary>
-    /// This method is called whenever the window is resized by the user.
-    /// </summary>
-    private void OnClientSizeChanged(object? _, EventArgs __) => UpdateRenderScale();
 
     private void UpdatePatternTablesDisplay()
     {
@@ -133,6 +227,11 @@ internal class EmulatorGame : Game
             }
         }
     }
+
+    /// <summary>
+    /// This method is called whenever the window is resized by the user.
+    /// </summary>
+    private void OnClientSizeChanged(object? _, EventArgs __) => UpdateRenderScale();
 
     /// <summary>
     /// Resize all screen elements as necessary based on the current viewport
@@ -158,8 +257,9 @@ internal class EmulatorGame : Game
             _nameTablesDisplay.SetNextTo(_display, Side.Right, Align.Top, gap: 4);
             _patternTablesDisplay.SetNextTo(_nameTablesDisplay, Side.Bottom, Align.Right, gap: 4);
 
+            // Add space for Myra UI for now.
             _graphics.PreferredBackBufferHeight =
-                _display.RenderHeight + _patternTablesDisplay.RenderHeight + 4 + 2 * Margin;
+                _display.RenderHeight + _patternTablesDisplay.RenderHeight + 4 + 2 * Margin + 200;
             _graphics.PreferredBackBufferWidth =
                 _display.RenderWidth + _nameTablesDisplay.RenderWidth + 4 + 2 * Margin;
             _graphics.ApplyChanges();
