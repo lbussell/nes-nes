@@ -141,11 +141,6 @@ public class Ppu : IMemoryListener
     public RenderPixel? RenderPixelCallback { get; set; }
 
     /// <summary>
-    /// Called whenever the PPU triggers an NMI (non-maskable interrupt).
-    /// </summary>
-    public Action? NmiCallback { get; set; }
-
-    /// <summary>
     /// The memory range that the PPU is interested in intercepting reads and
     /// writes to. While the PPU is interested in a large range of memory
     /// (0x2000 to 0x3FFF), it only uses 8 bytes for PPU registers. The rest of
@@ -160,11 +155,13 @@ public class Ppu : IMemoryListener
         set => SetRegisterBit(PpuCtrl, 1 << 7, value);
     }
 
-    private bool VblankFlag
+    public bool VblankFlag
     {
         get => GetRegisterBit(PpuStatus, 1 << 7);
         set => SetRegisterBit(PpuStatus, 1 << 7, value);
     }
+
+    public bool NmiInterrupt => NmiEnabled && VblankFlag;
 
     /// <summary>
     /// Indicates whether the PPU should increment the address register by 1
@@ -377,12 +374,6 @@ public class Ppu : IMemoryListener
         if (_scanline == VblankScanline && _cycle == 1)
         {
             VblankFlag = true;
-        }
-
-        // Trigger NMI (non-maskable interrupt)
-        if (NmiEnabled && VblankFlag)
-        {
-            NmiCallback?.Invoke();
         }
 
         if (_cycle < DisplayWidth && _scanline < DisplayHeight)

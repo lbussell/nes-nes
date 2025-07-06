@@ -48,8 +48,11 @@ public class NesConsole
         );
         _memory.TickCpu = _cpu.Tick;
 
+        // The CPU checks some pins on the PPU to determine if an NMI is pending.
+        _cpu.CheckNmiPins = () => _ppu.NmiInterrupt;
+
+        // This function is called whenever the PPU wants to render a pixel.
         _ppu.RenderPixelCallback = renderPixelCallback;
-        _ppu.NmiCallback = _cpu.QueueNonMaskableInterrupt;
     }
 
     public int CpuCycles => _cpu.Cycles;

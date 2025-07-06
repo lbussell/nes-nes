@@ -12,6 +12,7 @@ public class Cpu
     private Registers _registers;
     private readonly CpuCallback? _logCpuState;
     private readonly Action? _tickCallback;
+    private readonly EdgeTriggeredFlag _executeNmi = new();
 
     private int _cyclesThisInstruction;
 
@@ -38,6 +39,15 @@ public class Cpu
         // Internal set only for testing purposes.
         internal set => _registers = value;
     }
+
+    /// <summary>
+    /// This callback is called to check the status of the PPU's pins to
+    /// determine if an NMI was triggered.
+    /// </summary>
+    /// <returns>
+    /// True if an NMI should be triggered, false otherwise.
+    /// </returns>
+    public Func<bool> CheckNmiPins { get; set; } = () => false;
 
     /// <summary>
     /// Sets registers and flags to their initial states. The reset vector is
@@ -96,7 +106,8 @@ public class Cpu
 
         var cyclesElapsed = EndInstruction();
 
-        if (_nmiPending)
+        _executeNmi.Update(CheckNmiPins());
+        if (_executeNmi.Rising)
         {
             cyclesElapsed += NonMaskableInterrupt();
         }
@@ -125,17 +136,8 @@ public class Cpu
         return implementedOpcodes;
     }
 
-    private bool _nmiPending = false;
-
-    public void QueueNonMaskableInterrupt()
-    {
-        _nmiPending = true;
-    }
-
     private int NonMaskableInterrupt()
     {
-        _nmiPending = false;
-
         // Store PC and Status on the stack
         Tick();
         PushStack(_registers.PC);
