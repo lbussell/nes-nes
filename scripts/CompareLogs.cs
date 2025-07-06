@@ -67,12 +67,6 @@ static bool Differs(string expected, string actual, out int index)
     var expectedSpan = expected.AsSpan();
     var actualSpan = actual.AsSpan();
 
-    if (expectedSpan.Length != actualSpan.Length)
-    {
-        index = Math.Min(expectedSpan.Length, actualSpan.Length) + 1;
-        return true;
-    }
-
     for (int i = 0; i < Math.Min(expectedSpan.Length, actualSpan.Length); i++)
     {
         if (expectedSpan[i] != actualSpan[i])

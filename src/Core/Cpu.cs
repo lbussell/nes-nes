@@ -69,11 +69,6 @@ public class Cpu
             _logCpuState(_registers.PC, _registers);
         }
 
-        if (_nmiPending)
-        {
-            return NonMaskableInterrupt();
-        }
-
         // Load next instruction
         StartInstruction();
         byte opcode = Fetch8();
@@ -100,6 +95,12 @@ public class Cpu
         }
 
         var cyclesElapsed = EndInstruction();
+
+        if (_nmiPending)
+        {
+            cyclesElapsed += NonMaskableInterrupt();
+        }
+
         return cyclesElapsed;
     }
 
@@ -136,10 +137,12 @@ public class Cpu
         _nmiPending = false;
 
         // Store PC and Status on the stack
+        Tick();
         PushStack(_registers.PC);
         PushStack((byte)_registers.P);
 
         // Disable interrupts
+        Tick();
         _registers.SetFlag(Flags.InterruptDisable);
 
         // Load PC with the address in the NMI vector
