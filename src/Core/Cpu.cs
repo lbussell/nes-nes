@@ -802,6 +802,8 @@ public class Cpu
     /// </summary>
     private void RotateLeftMemory(ushort address)
     {
+        // Read-modify-write instructions take an extra cycle to complete.
+        Tick();
         Write8(address, RotateLeft(Read8(address)));
     }
 
@@ -838,6 +840,8 @@ public class Cpu
     /// </summary>
     private void RotateRightMemory(ushort address)
     {
+        // Read-modify-write instructions take an extra cycle to complete.
+        Tick();
         Write8(address, RotateRight(Read8(address)));
     }
 
