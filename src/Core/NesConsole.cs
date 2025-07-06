@@ -13,6 +13,8 @@ public class NesConsole
     private readonly Cpu _cpu;
     private readonly Ppu _ppu;
     private readonly Memory _memory;
+    private readonly Controllers _controllers = new();
+
     private CartridgeData? _cartridge = null;
 
     private int _ppuCyclesForThisScanline = 0;
@@ -33,11 +35,12 @@ public class NesConsole
     /// </summary>
     public NesConsole(
         RenderPixel? renderPixelCallback = null,
-        CpuCallback? logCpuState = null
+        CpuCallback? logCpuState = null,
+        ReadControllers? readControllers = null
     )
     {
         _ppu = new Ppu();
-        _memory = new Memory(_ppu);
+        _memory = new Memory(_ppu, _controllers);
         var registers = Registers.Initial;
 
         _cpu = new Cpu(
@@ -53,6 +56,11 @@ public class NesConsole
 
         // This function is called whenever the PPU wants to render a pixel.
         _ppu.RenderPixelCallback = renderPixelCallback;
+
+        if (readControllers is not null)
+        {
+            _controllers.ReadControllers = readControllers;
+        }
     }
 
     public int CpuCycles => _cpu.Cycles;

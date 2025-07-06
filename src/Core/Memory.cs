@@ -29,10 +29,22 @@ public class Memory : IMemory
     /// A collection of memory listeners that may be interested in intercepting
     /// or listening to memory reads and writes.
     /// </param>
-    public Memory(Ppu? ppu = null)
+    public Memory(Ppu? ppu = null, Controllers? controllers = null)
     {
         _ppu = ppu;
-        _listeners = ppu is not null ? [_ppu!] : [];
+        var listeners = new List<IMemoryListener>();
+
+        if (ppu is not null)
+        {
+            listeners.Add(ppu);
+        }
+
+        if (controllers is not null)
+        {
+            listeners.Add(controllers);
+        }
+
+        _listeners = listeners.ToArray();
     }
 
     public Action TickCpu { get; set; } = () => { };
