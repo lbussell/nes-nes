@@ -5,6 +5,8 @@ namespace NesNes.Core;
 
 public class Memory : IMemory
 {
+    private readonly Ppu? _ppu;
+
     private readonly byte[] _internalRam = new byte[MemoryRegions.InternalRamSize];
 
     // This is a placeholder that covers all 64K of memory, until more
@@ -27,15 +29,13 @@ public class Memory : IMemory
     /// A collection of memory listeners that may be interested in intercepting
     /// or listening to memory reads and writes.
     /// </param>
-    public Memory(IEnumerable<IMemoryListener> listeners)
+    public Memory(Ppu? ppu = null)
     {
-        _listeners = listeners
-            // Sort listeners by memory addresses so that we can efficiently
-            // check if listeners are interested in a specific address.
-            .OrderBy(l => l.MemoryRange.Start)
-            .ThenBy(l => l.MemoryRange.End)
-            .ToArray();
+        _ppu = ppu;
+        _listeners = ppu is not null ? [_ppu!] : [];
     }
+
+    public Action TickCpu { get; set; } = () => { };
 
     public void LoadRom(CartridgeData cart)
     {
@@ -96,6 +96,15 @@ public class Memory : IMemory
     /// <inheritdoc/>
     public void Write8(ushort address, byte value)
     {
+        if (address == MemoryRegions.OamDma)
+        {
+            // OAM DMA transfer. The value written to the OAM DMA register is
+            // the source address page to copy data from. All bytes from the
+            // source page of CPU memory will be copied to OAM memory.
+            DoOamDma(sourcePage: value);
+            return;
+        }
+
         foreach (IMemoryListener listener in _listeners)
         {
             if (address >= listener.MemoryRange.Start && address < listener.MemoryRange.End)
@@ -113,6 +122,23 @@ public class Memory : IMemory
         // Fall back to old behavior. TODO: Remove this once other components
         // are updated to implement IMemoryListener.
         Map(address) = value;
+    }
+
+    private void DoOamDma(byte sourcePage)
+    {
+        // There are a couple of dummy writes/ticks at the beginning of OAM DMA
+        TickCpu();
+        TickCpu();
+
+        byte data;
+        for (int i = 0; i <= 0xFF; i++)
+        {
+            data = Read8((ushort)((sourcePage << 8) + i));
+            TickCpu();
+
+            _ppu?.WriteOam((byte)i, data);
+            TickCpu();
+        }
     }
 
     /// <summary>

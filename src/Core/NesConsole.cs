@@ -37,9 +37,16 @@ public class NesConsole
     )
     {
         _ppu = new Ppu();
-        _memory = new Memory([_ppu]);
+        _memory = new Memory(_ppu);
         var registers = Registers.Initial;
-        _cpu = new Cpu(registers, _memory, logCpuState, () => Tick());
+
+        _cpu = new Cpu(
+            registers: registers,
+            memory: _memory,
+            logCpuState: logCpuState,
+            tickCallback: () => Tick()
+        );
+        _memory.TickCpu = _cpu.Tick;
 
         _ppu.RenderPixelCallback = renderPixelCallback;
         _ppu.NmiCallback = _cpu.QueueNonMaskableInterrupt;

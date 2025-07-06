@@ -1137,7 +1137,11 @@ public class Cpu
         return _cyclesThisInstruction;
     }
 
-    private void Tick()
+    /// <summary>
+    /// Does not advance the CPU, but increments cycle count and calls other
+    /// functions dependent on the CPU advancing.
+    /// </summary>
+    public void Tick()
     {
         Cycles += 1;
         _cyclesThisInstruction += 1;

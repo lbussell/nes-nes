@@ -78,6 +78,8 @@ public class Ppu : IMemoryListener
     // The following are indices into the _registers memory array
     private const int PpuCtrl = 0;
     private const int PpuStatus = 2;
+    private const int OamAddress = 3;
+    private const int OamData = 4;
     private const int PpuAddress = 6;
     private const int PpuData = 7;
 
@@ -189,6 +191,11 @@ public class Ppu : IMemoryListener
         address = MapToMirroredRegisterAddress(address);
         WriteInternalRegister(address, value);
         return true;
+    }
+
+    public void WriteOam(byte address, byte value)
+    {
+        _oamData[address] = value;
     }
 
     /// <summary>

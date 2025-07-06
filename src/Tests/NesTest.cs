@@ -69,7 +69,7 @@ public class NesTest
     {
         // Construct the console
         var ppu = new Ppu();
-        var memory = new Memory(listeners: [ppu]);
+        var memory = new Memory(ppu);
         var cpu = new Cpu(Registers.Initial, memory, Trace);
         var console = new NesConsole(cpu, ppu, memory);
 

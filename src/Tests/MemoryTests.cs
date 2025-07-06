@@ -11,7 +11,7 @@ public class MemoryTests
     [Fact]
     public void ReadWriteMemory()
     {
-        IMemory memory = new Memory([]);
+        IMemory memory = new Memory();
         var address = MemoryRegions.InternalRam;
         byte inputValue = 0xAA;
 
@@ -75,7 +75,7 @@ public class MemoryTests
     )
     {
         var ppu = new Ppu();
-        IMemory memory = new Memory(listeners: [ppu]);
+        IMemory memory = new Memory(ppu);
         var numberOfMirrors = (mirrorEnd - mirrorStart - 1) / mirrorSize;
 
         // Write the input value to the base location
