@@ -367,7 +367,7 @@ public class Cpu
     /// </summary>
     private void PushStack(byte value)
     {
-        _memory[(ushort)(MemoryRegions.Stack + _registers.SP)] = value;
+        Write8((ushort)(MemoryRegions.Stack + _registers.SP), value);
         _registers.SP -= 1;
     }
 
@@ -378,7 +378,7 @@ public class Cpu
     private byte PullStack()
     {
         _registers.SP += 1;
-        var result = _memory[(ushort)(MemoryRegions.Stack + _registers.SP)];
+        var result = Read8((ushort)(MemoryRegions.Stack + _registers.SP));
         return result;
     }
 
@@ -662,6 +662,8 @@ public class Cpu
 
         // Set the program counter to the target address.
         _registers.PC = address;
+        // Tick an extra cycle for setting the PC.
+        Tick();
     }
 
     /// <summary>
@@ -746,6 +748,7 @@ public class Cpu
     /// </summary>
     private void PushA()
     {
+        Tick();
         PushStack(_registers.A);
     }
 
@@ -757,6 +760,7 @@ public class Cpu
     {
         Flags status = _registers.P;
         status |= Flags.B;
+        Tick();
         PushStack((byte)status);
     }
 
