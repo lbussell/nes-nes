@@ -382,8 +382,6 @@ public class Ppu : IMemoryListener
         // Trigger NMI (non-maskable interrupt)
         if (NmiEnabled && VblankFlag)
         {
-            // We "read" the PPU status register, so we need to clear the VBlank flag.
-            VblankFlag = false;
             NmiCallback?.Invoke();
         }
 
