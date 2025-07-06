@@ -111,6 +111,11 @@ public class Ppu : IMemoryListener
     // Data buffer used for delaying reads of PPU memory
     private byte _dataBuffer;
 
+    // The open bus is loaded with data whenever reads or writes are made to
+    // the PPU's registers. It is also mapped to bits 0-4 of the PPU status
+    // register.
+    private byte _openBus;
+
     /// <summary>
     /// Creates a new instance of the PPU.
     /// </summary>
@@ -222,29 +227,32 @@ public class Ppu : IMemoryListener
                 // The lower 5 bits of the status register are unused. These
                 // have been set to match mesen. No games should rely on this
                 // behavior, but it is more accurate to the hardware.
-                byte value = (byte)(_registers[address] | 0x10);
+                _openBus = (byte)(_registers[address] | (_openBus & 0x1F));
 
                 // Reading from the status register resets the address latch
                 // and clears the vertical blank flag.
                 _addressRegister.ResetLatch();
                 VblankFlag = false;
+                break;
 
-                return value;
             case PpuData:
-                var result = _dataBuffer;
+                _openBus = _dataBuffer;
                 _dataBuffer = ReadMemory(_addressRegister.Value);
 
                 // Palette RAM can be read immediately without going through the data buffer
                 if (_addressRegister.Value >= PaletteRamStart && _addressRegister.Value < PaletteRamEnd)
                 {
-                    result = _dataBuffer;
+                    _openBus = _dataBuffer;
                 }
 
                 _addressRegister.Increment(IncrementMode);
-                return result;
+                break;
             default:
-                return _registers[address];
+                _openBus = _registers[address];
+                break;
         }
+
+        return _openBus;
     }
 
     /// <summary>
@@ -259,11 +267,13 @@ public class Ppu : IMemoryListener
                 _addressRegister.Write(value);
                 break;
             case PpuData:
-                WriteMemory(_addressRegister.Value, value);
+                _openBus = value;
+                WriteMemory(_addressRegister.Value, _openBus);
                 _addressRegister.Increment(IncrementMode);
                 break;
             default:
-                _registers[address] = value;
+                _openBus = value;
+                _registers[address] = _openBus;
                 break;
         }
     }
