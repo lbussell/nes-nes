@@ -457,13 +457,16 @@ public class Cpu
     /// </summary>
     private int AslMemory(AddressingMode mode)
     {
+        // Read-modify-write operations take 1 extra cycle.
+        Tick();
+
         var addressResult = GetAddress(mode);
-        byte operand = _memory[addressResult.Address];
+        byte operand = Read8(addressResult.Address);
 
         int result = operand << 1;
         _registers.SetCarry(result);
         _registers.SetZeroAndNegative((byte)result);
-        _memory[addressResult.Address] = (byte)result;
+        Write8(addressResult.Address, (byte)result);
 
         return addressResult.ExtraCycles;
     }
