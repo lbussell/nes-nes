@@ -377,6 +377,7 @@ public class Cpu
     /// </summary>
     private byte PullStack()
     {
+        Tick();
         _registers.SP += 1;
         var result = Read8((ushort)(MemoryRegions.Stack + _registers.SP));
         return result;
@@ -771,6 +772,7 @@ public class Cpu
     private void PullA()
     {
         _registers.A = PullStack();
+        Tick();
         _registers.SetZeroAndNegative(_registers.A);
     }
 
@@ -782,6 +784,7 @@ public class Cpu
     private void PullP()
     {
         _registers.P = (Flags)PullStack();
+        Tick();
         _registers.SetFlag(Flags.Unused);
         _registers.SetFlag(Flags.B, false);
     }
@@ -881,6 +884,9 @@ public class Cpu
     private void Rts()
     {
         _registers.PC = PullStack16();
+        // Takes one extra cycle to post-increment the program counter. This
+        // compensates for the off-by-one address pushed by JSR.
+        Tick();
         _registers.PC += 1;
     }
 
