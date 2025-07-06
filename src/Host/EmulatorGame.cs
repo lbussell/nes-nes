@@ -25,7 +25,7 @@ internal class EmulatorGame : Game
 
     private readonly StringBuilder _textLog = new StringBuilder();
     private readonly int? _runUntilCpuCycle;
-    private bool _emulationIsRunning;
+    private bool _emulationIsRunning = true;
     private bool _enableLogging;
 
     MenuItem? _startButton;

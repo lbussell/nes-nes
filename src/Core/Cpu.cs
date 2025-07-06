@@ -93,15 +93,13 @@ public class Cpu
             Tick();
         }
 
-        var cyclesElapsed = EndInstruction();
-
         const int MinCycles = 2;
-        while (cyclesElapsed < MinCycles)
+        while (_cyclesThisInstruction < MinCycles)
         {
-            cyclesElapsed += 1;
             Tick();
         }
 
+        var cyclesElapsed = EndInstruction();
         return cyclesElapsed;
     }
 
@@ -202,48 +200,55 @@ public class Cpu
         opcodes[0x58] = new("CLI", Implicit(() => _registers.ClearFlag(Flags.InterruptDisable)), AddressingMode.Implicit, 2);
         opcodes[0xB8] = new("CLV", Implicit(() => _registers.ClearFlag(Flags.Overflow)), AddressingMode.Implicit, 2);
 
-        opcodes[0xC9] = new("CMP", UseOperand(Cmp), AddressingMode.Immediate, 2);
-        opcodes[0xC5] = new("CMP", UseOperand(Cmp), AddressingMode.ZeroPage, 3);
-        opcodes[0xD5] = new("CMP", UseOperand(Cmp), AddressingMode.ZeroPageX, 4);
-        opcodes[0xCD] = new("CMP", UseOperand(Cmp), AddressingMode.Absolute, 4);
-        opcodes[0xDD] = new("CMP", UseOperand(Cmp), AddressingMode.AbsoluteX, 4);
-        opcodes[0xD9] = new("CMP", UseOperand(Cmp), AddressingMode.AbsoluteY, 4);
-        opcodes[0xC1] = new("CMP", UseOperand(Cmp), AddressingMode.IndirectX, 6);
-        opcodes[0xD1] = new("CMP", UseOperand(Cmp), AddressingMode.IndirectY, 5);
+        var cmp = UseOperand(Cmp);
+        opcodes[0xC9] = new("CMP", cmp, AddressingMode.Immediate, 2);
+        opcodes[0xC5] = new("CMP", cmp, AddressingMode.ZeroPage, 3);
+        opcodes[0xD5] = new("CMP", cmp, AddressingMode.ZeroPageX, 4);
+        opcodes[0xCD] = new("CMP", cmp, AddressingMode.Absolute, 4);
+        opcodes[0xDD] = new("CMP", cmp, AddressingMode.AbsoluteX, 4);
+        opcodes[0xD9] = new("CMP", cmp, AddressingMode.AbsoluteY, 4);
+        opcodes[0xC1] = new("CMP", cmp, AddressingMode.IndirectX, 6);
+        opcodes[0xD1] = new("CMP", cmp, AddressingMode.IndirectY, 5);
 
-        opcodes[0xE0] = new("CPX", UseOperand(Cpx), AddressingMode.Immediate, 2);
-        opcodes[0xE4] = new("CPX", UseOperand(Cpx), AddressingMode.ZeroPage, 3);
-        opcodes[0xEC] = new("CPX", UseOperand(Cpx), AddressingMode.Absolute, 4);
+        var cpx = UseOperand(Cpx);
+        opcodes[0xE0] = new("CPX", cpx, AddressingMode.Immediate, 2);
+        opcodes[0xE4] = new("CPX", cpx, AddressingMode.ZeroPage, 3);
+        opcodes[0xEC] = new("CPX", cpx, AddressingMode.Absolute, 4);
 
-        opcodes[0xC0] = new("CPY", UseOperand(Cpy), AddressingMode.Immediate, 2);
-        opcodes[0xC4] = new("CPY", UseOperand(Cpy), AddressingMode.ZeroPage, 3);
-        opcodes[0xCC] = new("CPY", UseOperand(Cpy), AddressingMode.Absolute, 4);
+        var cpy = UseOperand(Cpy);
+        opcodes[0xC0] = new("CPY", cpy, AddressingMode.Immediate, 2);
+        opcodes[0xC4] = new("CPY", cpy, AddressingMode.ZeroPage, 3);
+        opcodes[0xCC] = new("CPY", cpy, AddressingMode.Absolute, 4);
 
-        opcodes[0xC6] = new("DEC", UseAddress(Dec), AddressingMode.ZeroPage, 5);
-        opcodes[0xD6] = new("DEC", UseAddress(Dec), AddressingMode.ZeroPageX, 6);
-        opcodes[0xCE] = new("DEC", UseAddress(Dec), AddressingMode.Absolute, 6);
-        opcodes[0xDE] = new("DEC", UseAddress(Dec), AddressingMode.AbsoluteX, 7);
+        var dec = UseAddress(Dec);
+        opcodes[0xC6] = new("DEC", dec, AddressingMode.ZeroPage, 5);
+        opcodes[0xD6] = new("DEC", dec, AddressingMode.ZeroPageX, 6);
+        opcodes[0xCE] = new("DEC", dec, AddressingMode.Absolute, 6);
+        opcodes[0xDE] = new("DEC", dec, AddressingMode.AbsoluteX, 7);
         opcodes[0xCA] = new("DEX", Implicit(() => Dex(ref _registers.X)), AddressingMode.Implicit, 2);
         opcodes[0x88] = new("DEY", Implicit(() => Dex(ref _registers.Y)), AddressingMode.Implicit, 2);
 
-        opcodes[0x49] = new("EOR", UseOperand(Eor), AddressingMode.Immediate, 2);
-        opcodes[0x45] = new("EOR", UseOperand(Eor), AddressingMode.ZeroPage, 3);
-        opcodes[0x55] = new("EOR", UseOperand(Eor), AddressingMode.ZeroPageX, 4);
-        opcodes[0x4D] = new("EOR", UseOperand(Eor), AddressingMode.Absolute, 4);
-        opcodes[0x5D] = new("EOR", UseOperand(Eor), AddressingMode.AbsoluteX, 4);
-        opcodes[0x59] = new("EOR", UseOperand(Eor), AddressingMode.AbsoluteY, 4);
-        opcodes[0x41] = new("EOR", UseOperand(Eor), AddressingMode.IndirectX, 6);
-        opcodes[0x51] = new("EOR", UseOperand(Eor), AddressingMode.IndirectY, 5);
+        var eor = UseOperand(Eor);
+        opcodes[0x49] = new("EOR", eor, AddressingMode.Immediate, 2);
+        opcodes[0x45] = new("EOR", eor, AddressingMode.ZeroPage, 3);
+        opcodes[0x55] = new("EOR", eor, AddressingMode.ZeroPageX, 4);
+        opcodes[0x4D] = new("EOR", eor, AddressingMode.Absolute, 4);
+        opcodes[0x5D] = new("EOR", eor, AddressingMode.AbsoluteX, 4);
+        opcodes[0x59] = new("EOR", eor, AddressingMode.AbsoluteY, 4);
+        opcodes[0x41] = new("EOR", eor, AddressingMode.IndirectX, 6);
+        opcodes[0x51] = new("EOR", eor, AddressingMode.IndirectY, 5);
 
-        opcodes[0xE6] = new("INC", UseAddress(Inc), AddressingMode.ZeroPage, 5);
-        opcodes[0xF6] = new("INC", UseAddress(Inc), AddressingMode.ZeroPageX, 6);
-        opcodes[0xEE] = new("INC", UseAddress(Inc), AddressingMode.Absolute, 6);
-        opcodes[0xFE] = new("INC", UseAddress(Inc), AddressingMode.AbsoluteX, 7);
+        var inc = UseAddress(Inc);
+        opcodes[0xE6] = new("INC", inc, AddressingMode.ZeroPage, 5);
+        opcodes[0xF6] = new("INC", inc, AddressingMode.ZeroPageX, 6);
+        opcodes[0xEE] = new("INC", inc, AddressingMode.Absolute, 6);
+        opcodes[0xFE] = new("INC", inc, AddressingMode.AbsoluteX, 7);
         opcodes[0xE8] = new("INX", Implicit(() => Increment(ref _registers.X)), AddressingMode.Implicit, 2);
         opcodes[0xC8] = new("INY", Implicit(() => Increment(ref _registers.Y)), AddressingMode.Implicit, 2);
 
-        opcodes[0x4C] = new("JMP", UseAddress(Jmp), AddressingMode.Absolute, 3);
-        opcodes[0x6C] = new("JMP", UseAddress(Jmp), AddressingMode.Indirect, 5);
+        var jmp = UseAddress(Jmp);
+        opcodes[0x4C] = new("JMP", jmp, AddressingMode.Absolute, 3);
+        opcodes[0x6C] = new("JMP", jmp, AddressingMode.Indirect, 5);
         opcodes[0x20] = new("JSR", UseAddress(Jsr), AddressingMode.Absolute, 6);
 
         var lda = UseOperand(Lda);
@@ -326,13 +331,14 @@ public class Cpu
         opcodes[0x78] = new("SEI", Implicit(() => _registers.SetFlag(Flags.InterruptDisable)), AddressingMode.Implicit, 2);
 
         var sta = UseAddress(address => Write8(address, _registers.A));
+        var staAbsoluteOrIndirect = UseAddress(address => Write8(address, _registers.A), ignorePageCross: true);
         opcodes[0x85] = new("STA", sta, AddressingMode.ZeroPage, 3);
         opcodes[0x95] = new("STA", sta, AddressingMode.ZeroPageX, 4);
         opcodes[0x8D] = new("STA", sta, AddressingMode.Absolute, 4);
-        opcodes[0x9D] = new("STA", sta, AddressingMode.AbsoluteX, 5);
-        opcodes[0x99] = new("STA", sta, AddressingMode.AbsoluteY, 5);
+        opcodes[0x9D] = new("STA", staAbsoluteOrIndirect, AddressingMode.AbsoluteX, 5);
+        opcodes[0x99] = new("STA", staAbsoluteOrIndirect, AddressingMode.AbsoluteY, 5);
         opcodes[0x81] = new("STA", sta, AddressingMode.IndirectX, 6);
-        opcodes[0x91] = new("STA", sta, AddressingMode.IndirectY, 6);
+        opcodes[0x91] = new("STA", staAbsoluteOrIndirect, AddressingMode.IndirectY, 6);
 
         var stx = UseAddress(address => Write8(address, _registers.X));
         opcodes[0x86] = new("STX", stx, AddressingMode.ZeroPage, 3);
@@ -585,6 +591,11 @@ public class Cpu
         var value = Read8(address);
         var result = (byte)(value - 1);
         Write8(address, result);
+
+        // Read-modify-write instructions perform an extra dummy write during
+        // the "modify" stage and thus take one extra CPU cycle to complete.
+        Tick();
+
         _registers.SetZeroAndNegative(result);
     }
 
@@ -595,6 +606,7 @@ public class Cpu
     private void Dex(ref byte target)
     {
         target -= 1;
+        Tick();
         _registers.SetZeroAndNegative(target);
     }
 
@@ -944,10 +956,10 @@ public class Cpu
     /// <summary>
     /// Wrapper for instructions that simply operate on an address.
     /// </summary>
-    private InstructionHandler UseAddress(Action<ushort> action) =>
+    private InstructionHandler UseAddress(Action<ushort> action, bool ignorePageCross = false) =>
         mode =>
         {
-            var addressResult = GetAddress(mode);
+            var addressResult = GetAddress(mode, ignorePageCross);
             action(addressResult.Address);
             return addressResult.ExtraCycles;
         };
@@ -975,7 +987,7 @@ public class Cpu
     /// Thrown when <see cref="AddressingMode.Implicit"/> is used, because it
     /// never has an associated address to fetch or calculate.
     /// </exception>
-    private AddressResult GetAddress(AddressingMode mode)
+    private AddressResult GetAddress(AddressingMode mode, bool ignorePageCross = false)
     {
         return mode switch
         {
@@ -1013,7 +1025,9 @@ public class Cpu
         {
             ushort address = Fetch16();
             ushort newAddress = (ushort)(address + _registers.X);
-            int extraCycles = CalculatePageCrossPenalty(address, newAddress);
+            int extraCycles = ignorePageCross
+                ? 1
+                : CalculatePageCrossPenalty(address, newAddress);
             return new AddressResult(newAddress, extraCycles);
         }
 
@@ -1021,7 +1035,9 @@ public class Cpu
         {
             ushort address = Fetch16();
             ushort newAddress = (ushort)(address + _registers.Y);
-            int extraCycles = CalculatePageCrossPenalty(address, newAddress);
+            int extraCycles = ignorePageCross
+                ? 1
+                : CalculatePageCrossPenalty(address, newAddress);
             return new AddressResult(newAddress, extraCycles);
         }
 
@@ -1029,7 +1045,7 @@ public class Cpu
         {
             ushort lsbAddress = Fetch16();
 
-            byte lsb = _memory[lsbAddress];
+            byte lsb = Read8(lsbAddress);
             // Handle wrap-around for the second byte
             ushort msbAddress = (ushort)((lsbAddress & 0xFF00) + (byte)(lsbAddress + 1));
             byte msb = Read8(msbAddress);
@@ -1063,7 +1079,9 @@ public class Cpu
             byte zeroPageAddress = Fetch8();
             ushort targetPointer = Read16ZeroPageWraparound(zeroPageAddress);
             ushort targetAddress = (ushort)(targetPointer + _registers.Y);
-            int extraCycles = CalculatePageCrossPenalty(zeroPageAddress, targetAddress);
+            int extraCycles = ignorePageCross
+                ? 1
+                : CalculatePageCrossPenalty(targetPointer, targetAddress);
             return new AddressResult(targetAddress, extraCycles);
         }
     }

@@ -105,8 +105,6 @@ public class NesConsole
             int elapsedCpuCycles = _cpu.Step();
             cpuCyclesSinceLastScanline += elapsedCpuCycles;
 
-            // Run the PPU for the number of cycles we calculated to catch up
-            // with the CPU.
             int elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
             _ppuCyclesForThisScanline += elapsedPpuCycles;
         }
