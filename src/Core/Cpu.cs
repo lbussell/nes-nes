@@ -733,6 +733,9 @@ public class Cpu
     /// </summary>
     private void LsrMemory(ushort address)
     {
+        // Read-modify-write instructions take an extra cycle to complete.
+        Tick();
+
         byte value = Read8(address);
         _registers.SetFlag(Flags.Carry, (value & 0x01) != 0);
         byte result = (byte)(value >> 1);
