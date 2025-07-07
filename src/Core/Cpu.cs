@@ -336,14 +336,14 @@ public class Cpu
         opcodes[0x78] = new("SEI", Implicit(() => _registers.SetFlag(Flags.InterruptDisable)), AddressingMode.Implicit, 2);
 
         var sta = UseAddress(address => Write8(address, _registers.A));
-        var staAbsoluteOrIndirect = UseAddress(address => Write8(address, _registers.A), ignorePageCross: true);
+        var staIgnorePageCross = UseAddress(address => Write8(address, _registers.A), ignorePageCross: true);
         opcodes[0x85] = new("STA", sta, AddressingMode.ZeroPage, 3);
         opcodes[0x95] = new("STA", sta, AddressingMode.ZeroPageX, 4);
         opcodes[0x8D] = new("STA", sta, AddressingMode.Absolute, 4);
-        opcodes[0x9D] = new("STA", staAbsoluteOrIndirect, AddressingMode.AbsoluteX, 5);
-        opcodes[0x99] = new("STA", staAbsoluteOrIndirect, AddressingMode.AbsoluteY, 5);
+        opcodes[0x9D] = new("STA", staIgnorePageCross, AddressingMode.AbsoluteX, 5);
+        opcodes[0x99] = new("STA", staIgnorePageCross, AddressingMode.AbsoluteY, 5);
         opcodes[0x81] = new("STA", sta, AddressingMode.IndirectX, 6);
-        opcodes[0x91] = new("STA", staAbsoluteOrIndirect, AddressingMode.IndirectY, 6);
+        opcodes[0x91] = new("STA", staIgnorePageCross, AddressingMode.IndirectY, 6);
 
         var stx = UseAddress(address => Write8(address, _registers.X));
         opcodes[0x86] = new("STX", stx, AddressingMode.ZeroPage, 3);
@@ -1015,8 +1015,8 @@ public class Cpu
         {
             AddressingMode.Immediate => new AddressResult(_registers.PC++, 0),
             AddressingMode.ZeroPage => new AddressResult(Fetch8(), 0),
-            AddressingMode.ZeroPageX => new AddressResult((byte)(Fetch8() + _registers.X), 0),
-            AddressingMode.ZeroPageY => new AddressResult((byte)(Fetch8() + _registers.Y), 0),
+            AddressingMode.ZeroPageX => new AddressResult((byte)(Fetch8() + _registers.X), 1),
+            AddressingMode.ZeroPageY => new AddressResult((byte)(Fetch8() + _registers.Y), 1),
             AddressingMode.Relative => Relative(),
             AddressingMode.Absolute => Absolute(),
             AddressingMode.AbsoluteX => AbsoluteX(),
