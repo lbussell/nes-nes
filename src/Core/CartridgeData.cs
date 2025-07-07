@@ -24,6 +24,10 @@ public record CartridgeData
     /// </summary>
     public CartridgeHeader Header { get; }
 
+    public ReadOnlySpan<byte> RomPage1 => _prgRom.AsSpan(0, PrgRomPageSize);
+
+    public ReadOnlySpan<byte> RomPage2 => _prgRom.AsSpan(PrgRomPageSize, PrgRomPageSize);
+
     /// <summary>
     /// Contains the PRG ROM data, which contains program code.
     /// </summary>

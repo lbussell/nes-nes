@@ -9,16 +9,7 @@ public class Memory : IMemory
 
     private readonly byte[] _internalRam = new byte[MemoryRegions.InternalRamSize];
 
-    // This is a placeholder that covers all 64K of memory, until more
-    // sophisticated memory mapping/mirroring is implemented.
-    private readonly byte[] _memory = new byte[MemoryRegions.TotalSize];
-
-    private readonly byte[] _rom = new byte[2 * MemoryRegions.RomPageSize];
-
-    private Span<byte> RomPage1 => _rom.AsSpan(0, MemoryRegions.RomPageSize);
-
-    private Span<byte> RomPage2 =>
-        _rom.AsSpan(MemoryRegions.RomPageSize, MemoryRegions.RomPageSize);
+    private CartridgeData? _cartridge = null;
 
     private readonly IMemoryListener[] _listeners;
 
@@ -61,16 +52,7 @@ public class Memory : IMemory
         // emulated 6502's memory map. You can make an iNES parser once you
         // start trying to actually run Concentration Room or Donkey Kong.
 
-        // cart.PrgRom has already taken into account the header offset (0x10)
-        ReadOnlySpan<byte> prgRomData = cart.PrgRom;
-
-        cart.PrgRom.CopyTo(_rom);
-
-        // If the cartridge has only one PRG page, copy it to the second page
-        if (cart.Header.PrgPages == 1)
-        {
-            cart.PrgRom.CopyTo(RomPage2);
-        }
+        _cartridge = cart;
     }
 
     /// <inheritdoc/>
@@ -94,15 +76,31 @@ public class Memory : IMemory
             }
         }
 
+        if (wasHandled)
+        {
+            return value;
+        }
+
         // No listeners handled the read, so fall back to old behavior.
         // TODO: Remove this once other components are updated to implement
         // IMemoryListener.
-        if (!wasHandled)
+
+        // Mirror internal RAM every 2KB
+        if (address >= MemoryRegions.InternalRam && address <= MemoryRegions.InternalRamEnd)
         {
-            value = Map(address);
+            return _internalRam[address % MemoryRegions.InternalRamSize];
         }
 
-        return value;
+        if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
+        {
+            var romAddress = address - MemoryRegions.RomPage1;
+            if (_cartridge is not null)
+            {
+                return _cartridge.PrgRom[romAddress];
+            }
+        }
+
+        return 0;
     }
 
     /// <inheritdoc/>
@@ -133,7 +131,21 @@ public class Memory : IMemory
 
         // Fall back to old behavior. TODO: Remove this once other components
         // are updated to implement IMemoryListener.
-        Map(address) = value;
+
+        // Mirror internal RAM every 2KB
+        if (address >= MemoryRegions.InternalRam && address <= MemoryRegions.InternalRamEnd)
+        {
+            _internalRam[address % MemoryRegions.InternalRamSize] = value;
+        }
+
+        if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
+        {
+            // TODO: Some games have cartridge RAM. But for now, just ignore
+            // writes to the cartridge ROM.
+
+            // var romAddress = address - MemoryRegions.RomPage1;
+            // _cartridge?.PrgRom[romAddress] = value;
+        }
     }
 
     private void DoOamDma(byte sourcePage)
@@ -151,31 +163,5 @@ public class Memory : IMemory
             _ppu?.WriteOam((byte)i, data);
             TickCpu();
         }
-    }
-
-    /// <summary>
-    /// Maps the given address to the appropriate memory region. Takes care of
-    /// mirroring and other access restrictions and quirks.
-    /// </summary>
-    /// <remarks>
-    /// This should be removed once other components (cartridge, etc.) are
-    /// updated to implement <see cref="IMemoryListener"/> and handle their own
-    /// memory access.
-    /// </remarks>
-    private ref byte Map(ushort address)
-    {
-        // Mirror internal RAM every 2KB
-        if (address >= MemoryRegions.InternalRam && address <= MemoryRegions.InternalRamEnd)
-        {
-            return ref _internalRam[address % MemoryRegions.InternalRamSize];
-        }
-
-        if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
-        {
-            var romAddress = address - MemoryRegions.RomPage1;
-            return ref _rom[romAddress];
-        }
-
-        return ref _memory[address];
     }
 }
