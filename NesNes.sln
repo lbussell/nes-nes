@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NesNes.Tests", "src\Tests\N
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NesNes.Host", "src\Host\NesNes.Host.csproj", "{B696E56D-27A2-4ED2-8FD6-A86FA2CA1A17}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NesNes.Gui", "src\Gui\NesNes.Gui.csproj", "{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{B696E56D-27A2-4ED2-8FD6-A86FA2CA1A17}.Release|x64.Build.0 = Release|Any CPU
 		{B696E56D-27A2-4ED2-8FD6-A86FA2CA1A17}.Release|x86.ActiveCfg = Release|Any CPU
 		{B696E56D-27A2-4ED2-8FD6-A86FA2CA1A17}.Release|x86.Build.0 = Release|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Debug|x64.Build.0 = Debug|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Debug|x86.Build.0 = Debug|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Release|x64.ActiveCfg = Release|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Release|x64.Build.0 = Release|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Release|x86.ActiveCfg = Release|Any CPU
+		{5AB5D9D2-A760-4F11-89BB-8285D53ACFCC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
