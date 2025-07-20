@@ -12,9 +12,20 @@ GlfwWindowing.RegisterPlatform();
 GlfwInput.RegisterPlatform();
 
 const int Scale = 3;
+// NES display size
 var displaySize = new Vector2D<int>(256, 240);
 var windowSize = Scale * displaySize;
 
-using var window = new WindowManager(windowSize, "My Window");
+using var window = new WindowManager<GameWindow>(
+    windowSize,
+    (gl, input, imGui) => new GameWindow(
+        gl,
+        input,
+        imGui,
+        internalSize: displaySize
+    ),
+    "My Window"
+);
+
 window.Run();
 window.Dispose();

@@ -8,13 +8,20 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
 
-class WindowManager : IDisposable
+class WindowManager<TWindow> : IDisposable where TWindow : IGameWindow
 {
     private readonly IWindow _window;
     private readonly ServiceCollection _services = new();
+    private readonly Func<GL, IInputContext, ImGuiController, TWindow> _createWindow;
 
-    public WindowManager(Vector2D<int> size, string title = "New Window")
+    public WindowManager(
+        Vector2D<int> size,
+        Func<GL, IInputContext, ImGuiController, TWindow> createWindow,
+        string title = "New Window"
+    )
     {
+        _createWindow = createWindow;
+
         var windowOptions = new WindowOptions(
             isVisible: true,
             position: new Vector2D<int>(50, 50),
@@ -53,14 +60,17 @@ class WindowManager : IDisposable
             serviceProvider.GetRequiredService<IWindow>(),
             serviceProvider.GetRequiredService<IInputContext>()
         ));
-        _services.AddSingleton<GameWindow>();
 
         var serviceProvider = _services.BuildServiceProvider();
-        var gameWindow = serviceProvider.GetRequiredService<GameWindow>();
+        TWindow window = _createWindow(
+            serviceProvider.GetRequiredService<GL>(),
+            serviceProvider.GetRequiredService<IInputContext>(),
+            serviceProvider.GetRequiredService<ImGuiController>()
+        );
 
-        _window.Render += gameWindow.Render;
-        _window.Closing += gameWindow.OnClose;
-        _window.Update += gameWindow.Update;
-        _window.FramebufferResize += gameWindow.OnFramebufferResize;
+        _window.Render += window.Render;
+        _window.Closing += window.OnClose;
+        _window.Update += window.Update;
+        _window.FramebufferResize += window.OnFramebufferResize;
     }
 }

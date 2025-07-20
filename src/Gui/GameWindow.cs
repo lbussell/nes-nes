@@ -9,7 +9,15 @@ using Silk.NET.OpenGL.Extensions.ImGui;
 
 using NesNes.Gui;
 
-class GameWindow
+interface IGameWindow
+{
+    void OnClose();
+    void OnFramebufferResize(Vector2D<int> newSize);
+    void Render(double deltaTimeSeconds);
+    void Update(double deltaTimeSeconds);
+}
+
+class GameWindow : IGameWindow
 {
     private readonly GL _openGl;
     private readonly IInputContext _inputContext;
@@ -19,13 +27,15 @@ class GameWindow
     private readonly BufferObject<float> _vertexBuffer;
     private readonly BufferObject<uint> _elementBuffer;
     private readonly VertexArrayObject<float, uint> _vertexArrayObject;
+    private readonly Vector2D<int> _internalSize;
 
     private static readonly Color s_clearColor = Color.CornflowerBlue;
 
     public GameWindow(
         GL openGl,
         IInputContext inputContext,
-        ImGuiController imGuiController
+        ImGuiController imGuiController,
+        Vector2D<int> internalSize
     )
     {
         _openGl = openGl;
@@ -53,7 +63,7 @@ class GameWindow
             offset: 3);
 
         _shader = new NesNes.Gui.Shader(_openGl, VertexShaderCode, FragmentShaderCode);
-        _texture = new NesNes.Gui.Texture(_openGl, new Vector2D<int>(256, 240));
+        _texture = new NesNes.Gui.Texture(_openGl, internalSize);
 
         _shader.SetUniform("uTexture", 0);
 
