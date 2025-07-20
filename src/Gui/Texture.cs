@@ -57,19 +57,21 @@ public class Texture : IDisposable
         _pixelData[index + 1] = g;
         _pixelData[index + 2] = b;
         _pixelData[index + 3] = a;
+    }
 
-        // Update the texture with new pixel data
+    public void UpdateTextureData()
+    {
         Bind();
         _openGl.TexSubImage2D(
             target: TextureTarget.Texture2D,
             level: 0,
-            xoffset: x,
-            yoffset: y,
-            width: 1,
-            height: 1,
+            xoffset: 0,
+            yoffset: 0,
+            width: (uint)_size.X,
+            height: (uint)_size.Y,
             format: PixelFormat.Rgba,
             type: PixelType.UnsignedByte,
-            pixels: _pixelData.AsSpan().Slice(index, 4)
+            pixels: _pixelData.AsSpan()
         );
     }
 

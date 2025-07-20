@@ -6,7 +6,6 @@ using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
-
 using NesNes.Gui;
 
 interface IGameWindow
@@ -41,6 +40,7 @@ class GameWindow : IGameWindow
         _openGl = openGl;
         _inputContext = inputContext;
         _imGuiController = imGuiController;
+        _internalSize = internalSize;
 
         _elementBuffer = new BufferObject<uint>(_openGl, s_indices, BufferTargetARB.ElementArrayBuffer);
         _vertexBuffer = new BufferObject<float>(_openGl, s_vertices, BufferTargetARB.ArrayBuffer);
@@ -63,7 +63,7 @@ class GameWindow : IGameWindow
             offset: 3);
 
         _shader = new NesNes.Gui.Shader(_openGl, VertexShaderCode, FragmentShaderCode);
-        _texture = new NesNes.Gui.Texture(_openGl, internalSize);
+        _texture = new NesNes.Gui.Texture(_openGl, _internalSize);
 
         _shader.SetUniform("uTexture", 0);
 
@@ -76,8 +76,6 @@ class GameWindow : IGameWindow
 
     public unsafe void Render(double deltaTimeSeconds)
     {
-        // _texture.SetRandomColors();
-
         // Do any necessary updates
         // _imGuiController.Update((float)deltaTimeSeconds);
 
@@ -86,6 +84,7 @@ class GameWindow : IGameWindow
         _vertexArrayObject.Bind();
         _shader.Use();
         _texture.Bind();
+        _texture.UpdateTextureData();
         _openGl.DrawElements(
             mode: PrimitiveType.Triangles,
             count: (uint)s_indices.Length,
