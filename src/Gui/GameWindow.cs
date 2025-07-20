@@ -1,101 +1,154 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using System.Drawing;
 using Silk.NET.Input;
 using Silk.NET.Maths;
-using Silk.NET.Windowing;
-using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.OpenGL;
-using System.Drawing;
+using Silk.NET.OpenGL.Extensions.ImGui;
 
-namespace NesNes.Gui;
+using NesNes.Gui;
 
-internal sealed class GameWindow : IDisposable
+class GameWindow
 {
-    private const string WindowName = "nesnes";
-    private static readonly Vector2D<int> s_windowSize = new(256, 240);
-    private static readonly Vector2D<int> s_displaySize = s_windowSize;
+    private readonly GL _openGl;
+    private readonly IInputContext _inputContext;
+    private readonly ImGuiController _imGuiController;
+    private readonly NesNes.Gui.Shader _shader;
+    private readonly NesNes.Gui.Texture _texture;
+    private readonly BufferObject<float> _vertexBuffer;
+    private readonly BufferObject<uint> _elementBuffer;
+    private readonly VertexArrayObject<float, uint> _vertexArrayObject;
 
-    private static readonly WindowOptions s_windowOptions = new(
-        isVisible: true,
-        position: new Vector2D<int>(50, 50),
-        size: new Vector2D<int>(256, 240),
-        framesPerSecond: 0.0,
-        updatesPerSecond: 0.0,
-        api: GraphicsAPI.Default,
-        title: WindowName,
-        windowState: WindowState.Normal,
-        windowBorder: WindowBorder.Fixed,
-        isVSync: true,
-        shouldSwapAutomatically: true,
-        videoMode: VideoMode.Default
-    );
+    private static readonly Color s_clearColor = Color.CornflowerBlue;
 
-    private static readonly Color s_backgroundColor = Color.FromArgb(
-        alpha: 255,
-        red: (int)(.45f * 255),
-        green: (int)(.55f * 255),
-        blue: (int)(.60f * 255)
-    );
-
-    private readonly IWindow _window;
-    private GL? _openGl;
-    private IInputContext? _inputContext;
-    private ImGuiController? _imGuiController;
-
-    public GameWindow(IWindow window)
+    public GameWindow(
+        GL openGl,
+        IInputContext inputContext,
+        ImGuiController imGuiController
+    )
     {
-        _window = window;
-        _window.Load += OnLoad;
-        _window.Render += OnRender;
-        _window.Update += OnUpdate;
-        _window.FramebufferResize += OnFramebufferResize;
+        _openGl = openGl;
+        _inputContext = inputContext;
+        _imGuiController = imGuiController;
+
+        _elementBuffer = new BufferObject<uint>(_openGl, s_indices, BufferTargetARB.ElementArrayBuffer);
+        _vertexBuffer = new BufferObject<float>(_openGl, s_vertices, BufferTargetARB.ArrayBuffer);
+        _vertexArrayObject = new VertexArrayObject<float, uint>(_openGl, _vertexBuffer, _elementBuffer);
+
+        // Set up vertex attributes
+        // Position attribute (location = 0): 3 floats starting at offset 0
+        _vertexArrayObject.VertexAttributePointer(
+            index: 0,
+            count: 3,
+            type: VertexAttribPointerType.Float,
+            vertexSize: 5,
+            offset: 0);
+        // Texture coordinate attribute (location = 1): 2 floats starting at offset 3
+        _vertexArrayObject.VertexAttributePointer(
+            index: 1,
+            count: 2,
+            type: VertexAttribPointerType.Float,
+            vertexSize: 5,
+            offset: 3);
+
+        _shader = new NesNes.Gui.Shader(_openGl, VertexShaderCode, FragmentShaderCode);
+        _texture = new NesNes.Gui.Texture(_openGl, new Vector2D<int>(256, 240));
+
+        _shader.SetUniform("uTexture", 0);
+
+        _openGl.ClearColor(s_clearColor);
     }
 
-    public static GameWindow Create()
+    public void Update(double deltaTimeSeconds)
     {
-        var window = Window.Create(s_windowOptions);
-        return new GameWindow(window);
     }
 
-    public void Run() => _window.Run();
-
-    public void Dispose() => _window.Dispose();
-
-    private void OnLoad()
+    public unsafe void Render(double deltaTimeSeconds)
     {
-        _openGl = _window.CreateOpenGL();
+        // _texture.SetRandomColors();
 
-        _inputContext = _window.CreateInput();
-        for (int i = 0; i < _inputContext.Keyboards.Count; i++)
+        // Do any necessary updates
+        // _imGuiController.Update((float)deltaTimeSeconds);
+
+        // This is where you'll do any rendering beneath the ImGui context
+        _openGl.Clear(ClearBufferMask.ColorBufferBit);
+        _vertexArrayObject.Bind();
+        _shader.Use();
+        _texture.Bind();
+        _openGl.DrawElements(
+            mode: PrimitiveType.Triangles,
+            count: (uint)s_indices.Length,
+            type: DrawElementsType.UnsignedInt,
+            indices: (void*)0);
+
+        // Do all ImGui rendering
+        // ImGui.ShowUserGuide();
+        // _imGuiController.Render();
+    }
+
+    public void OnClose()
+    {
+    }
+
+    public void OnFramebufferResize(Vector2D<int> newSize) => throw new NotImplementedException();
+
+    private static readonly float[] s_vertices =
+    [
+        // aPosition------   aTexCoords
+         1.0f,  1.0f, 0.0f,  1.0f, 1.0f,
+         1.0f, -1.0f, 0.0f,  1.0f, 0.0f,
+        -1.0f, -1.0f, 0.0f,  0.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f,  0.0f, 1.0f
+    ];
+
+    private static readonly uint[] s_indices =
+    [
+        0, 1, 3, // first triangle (top-right, bottom-right, top-left)
+        1, 2, 3  // second triangle (bottom-right, bottom-left, top-left)
+    ];
+
+    private const string VertexShaderCode =
+        """
+        #version 330 core
+
+        layout (location = 0) in vec3 aPosition;
+
+        // On top of our aPosition attribute, we now create an aTexCoords attribute for our texture coordinates.
+        layout (location = 1) in vec2 aTexCoords;
+
+        // Likewise, we also assign an out attribute to go into the fragment shader.
+        out vec2 frag_texCoords;
+
+        void main()
         {
-            _inputContext.Keyboards[i].KeyDown += OnKeyDown;
+            gl_Position = vec4(aPosition, 1.0);
+
+            // This basic vertex shader does no additional processing of texture coordinates, so we can pass them
+            // straight to the fragment shader.
+            frag_texCoords = aTexCoords;
         }
+        """;
 
-        _imGuiController = new ImGuiController(_openGl, _window, _inputContext);
-    }
+    private const string FragmentShaderCode =
+        """
+        #version 330 core
 
-    private static void OnRender(double obj)
-    {
-        //Here all rendering should be done.
-    }
+        // This in attribute corresponds to the out attribute we defined in the vertex shader.
+        in vec2 frag_texCoords;
 
-    private static void OnUpdate(double obj)
-    {
-        //Here all updates to the program should be done.
-    }
+        out vec4 out_color;
 
-    private static void OnFramebufferResize(Vector2D<int> newSize)
-    {
-        //Update aspect ratios, clipping regions, viewports, etc.
-    }
+        // Now we define a uniform value!
+        // A uniform in OpenGL is a value that can be changed outside of the shader by modifying its value.
+        // A sampler2D contains both a texture and information on how to sample it.
+        // Sampling a texture is basically calculating the color of a pixel on a texture at any given point.
+        uniform sampler2D uTexture;
 
-    private void OnKeyDown(IKeyboard keyboard, Key key, int arg3)
-    {
-        //Check to close the window on escape.
-        if (key == Key.Escape)
+        void main()
         {
-            _window.Close();
+            // We use GLSL's texture function to sample from the texture at the given input texture coordinates.
+            out_color = texture(uTexture, frag_texCoords);
         }
-    }
+        """;
 }
