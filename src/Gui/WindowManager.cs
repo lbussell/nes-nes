@@ -3,31 +3,40 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Silk.NET.Input;
+using Silk.NET.Input.Glfw;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
+using Silk.NET.Windowing.Glfw;
 
-class WindowManager<TWindow> : IDisposable where TWindow : IGameWindow
+class WindowManager : IDisposable
 {
     private readonly IWindow _window;
+    private readonly GameWindowFactory _gameWindowFactory;
+
     private readonly ServiceCollection _services = new();
-    private readonly Func<GL, IInputContext, ImGuiController, TWindow> _createWindow;
 
     public WindowManager(
-        Vector2D<int> size,
-        Func<GL, IInputContext, ImGuiController, TWindow> createWindow,
+        GameWindowFactory gameWindowFactory,
+        int scale = 1,
         string title = "New Window"
     )
     {
-        _createWindow = createWindow;
+        _gameWindowFactory = gameWindowFactory;
+
+        // Needed for Native AOT. Usually Silk.NET does this automatically with
+        // reflection, but that doesn't work with Native AOT, so we have to
+        // do it manually.
+        GlfwWindowing.RegisterPlatform();
+        GlfwInput.RegisterPlatform();
 
         var windowOptions = new WindowOptions(
             isVisible: true,
             position: new Vector2D<int>(50, 50),
-            size: size,
-            framesPerSecond: 0.0,
-            updatesPerSecond: 0.0,
+            size: scale * gameWindowFactory.DisplaySize,
+            framesPerSecond: 60.0,
+            updatesPerSecond: 60.0,
             api: GraphicsAPI.Default,
             title: title,
             windowState: WindowState.Normal,
@@ -62,7 +71,7 @@ class WindowManager<TWindow> : IDisposable where TWindow : IGameWindow
         ));
 
         var serviceProvider = _services.BuildServiceProvider();
-        TWindow window = _createWindow(
+        IGameWindow window = _gameWindowFactory.CreateGameWindow(
             serviceProvider.GetRequiredService<GL>(),
             serviceProvider.GetRequiredService<IInputContext>(),
             serviceProvider.GetRequiredService<ImGuiController>()

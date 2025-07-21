@@ -7,16 +7,88 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using NesNes.Gui;
+using NesNes.Core;
+using ImGuiNET;
 
-interface IGameWindow
+internal interface IGameWindow : IRenderWindow
 {
     void OnClose();
     void OnFramebufferResize(Vector2D<int> newSize);
+}
+
+internal interface IRenderWindow
+{
     void Render(double deltaTimeSeconds);
+
+    /// <summary>
+    /// Happens before <see cref="Render"/>.
+    /// </summary>
+    /// <param name="deltaTimeSeconds">
+    /// Time in seconds since the last time this method was called.
+    /// </param>
     void Update(double deltaTimeSeconds);
 }
 
-class GameWindow : IGameWindow
+internal class EmulatorGameWindow(NesConsole console) : IRenderWindow
+{
+    private readonly NesConsole _console = console;
+
+    public void Update(double deltaTimeSeconds)
+    {
+        // Run one frame of emulation
+        for (int i = 0; i < Ppu.Scanlines; i += 1)
+        {
+            _console.StepScanline();
+        }
+    }
+
+    public void Render(double deltaTimeSeconds)
+    {
+        ImGui.ShowAboutWindow();
+    }
+}
+
+internal static class ConsoleExtensions
+{
+    private static readonly Vector2D<int> s_displaySize = new(Ppu.DisplayWidth, Ppu.DisplayHeight);
+
+    public static Vector2D<int> GetDisplaySize(this NesConsole console) => s_displaySize;
+}
+
+internal class GameWindowFactory(
+    NesConsole console
+)
+{
+    private readonly NesConsole _console = console;
+
+    public IGameWindow CreateGameWindow(
+        GL openGl,
+        IInputContext inputContext,
+        ImGuiController imGuiController
+    )
+    {
+        var emulatorGameWindow = new EmulatorGameWindow(_console);
+
+        var gameWindow = new SingleTextureGameWindow(
+            openGl,
+            inputContext,
+            imGuiController,
+            _console.GetDisplaySize(),
+            emulatorGameWindow
+        );
+
+        _console.Ppu.RenderPixelCallback = (x, y, r, g, b) => gameWindow.SetPixel(x, y, r, g, b);
+
+        return gameWindow;
+    }
+
+    public Vector2D<int> DisplaySize => _console.GetDisplaySize();
+}
+
+/// <summary>
+/// <see cref="SingleTextureGameWindow"/> manages all of the graphics for the running game.
+/// </summary>
+internal class SingleTextureGameWindow : IGameWindow
 {
     private readonly GL _openGl;
     private readonly IInputContext _inputContext;
@@ -27,20 +99,23 @@ class GameWindow : IGameWindow
     private readonly BufferObject<uint> _elementBuffer;
     private readonly VertexArrayObject<float, uint> _vertexArrayObject;
     private readonly Vector2D<int> _internalSize;
+    private readonly IRenderWindow[] _subWindows;
 
-    private static readonly Color s_clearColor = Color.CornflowerBlue;
+    private static readonly System.Drawing.Color s_clearColor = System.Drawing.Color.CornflowerBlue;
 
-    public GameWindow(
+    public SingleTextureGameWindow(
         GL openGl,
         IInputContext inputContext,
         ImGuiController imGuiController,
-        Vector2D<int> internalSize
+        Vector2D<int> internalSize,
+        params IRenderWindow[] subWindows
     )
     {
         _openGl = openGl;
         _inputContext = inputContext;
         _imGuiController = imGuiController;
         _internalSize = internalSize;
+        _subWindows = subWindows;
 
         _elementBuffer = new BufferObject<uint>(_openGl, s_indices, BufferTargetARB.ElementArrayBuffer);
         _vertexBuffer = new BufferObject<float>(_openGl, s_vertices, BufferTargetARB.ArrayBuffer);
@@ -72,18 +147,21 @@ class GameWindow : IGameWindow
 
     public void Update(double deltaTimeSeconds)
     {
+        foreach (var window in _subWindows)
+        {
+            window.Update(deltaTimeSeconds);
+        }
     }
 
     public unsafe void Render(double deltaTimeSeconds)
     {
         // Do any necessary updates
-        // _imGuiController.Update((float)deltaTimeSeconds);
+        _imGuiController.Update((float)deltaTimeSeconds);
 
         // This is where you'll do any rendering beneath the ImGui context
         _openGl.Clear(ClearBufferMask.ColorBufferBit);
         _vertexArrayObject.Bind();
         _shader.Use();
-        _texture.Bind();
         _texture.UpdateTextureData();
         _openGl.DrawElements(
             mode: PrimitiveType.Triangles,
@@ -91,9 +169,13 @@ class GameWindow : IGameWindow
             type: DrawElementsType.UnsignedInt,
             indices: (void*)0);
 
+        foreach (var window in _subWindows)
+        {
+            window.Render(deltaTimeSeconds);
+        }
+
         // Do all ImGui rendering
-        // ImGui.ShowUserGuide();
-        // _imGuiController.Render();
+        _imGuiController.Render();
     }
 
     public void OnClose()
@@ -101,6 +183,9 @@ class GameWindow : IGameWindow
     }
 
     public void OnFramebufferResize(Vector2D<int> newSize) => throw new NotImplementedException();
+
+    public void SetPixel(int x, int y, byte r, byte g, byte b, byte a = 0xFF) =>
+        _texture.SetPixel(x, y, r, g, b, a);
 
     private static readonly float[] s_vertices =
     [

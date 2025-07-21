@@ -47,7 +47,7 @@ public class Texture : IDisposable
         );
     }
 
-    public void SetPixel(int x, int y, byte r, byte g, byte b, byte a)
+    public void SetPixel(int x, int y, byte r, byte g, byte b, byte a = 0xFF)
     {
         // Calculate the index in the pixel data array
         int index = (y * _size.X + x) * 4;

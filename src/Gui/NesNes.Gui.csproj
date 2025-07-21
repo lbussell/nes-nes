@@ -17,6 +17,14 @@
     <PackageReference Include="Silk.NET.OpenGL" Version="$(SilkNetVersion)" />
     <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="$(SilkNetVersion)" />
     <PackageReference Include="Silk.NET.Windowing" Version="$(SilkNetVersion)" />
+    <PackageReference Include="ConsoleAppFramework" Version="5.4.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\NesNes.Core.csproj" />
   </ItemGroup>
 
 </Project>
