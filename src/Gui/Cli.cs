@@ -17,8 +17,8 @@ internal sealed class Cli
     [Command("")]
     public void Start(string rom)
     {
-        var romData = File.ReadAllBytes(rom);
-        var cartridge = CartridgeData.FromBytes(romData);
+        var romFileStream = File.OpenRead(rom);
+        var cartridge = new CartridgeData(romFileStream);
 
         WriteLine(
             $"""

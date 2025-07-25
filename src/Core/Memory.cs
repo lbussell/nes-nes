@@ -91,9 +91,9 @@ public class Memory : IMemory
             return _internalRam[address % MemoryRegions.InternalRamSize];
         }
 
-        if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
+        if (address >= MemoryRegions.PrgRom && address <= MemoryRegions.PrgRomEnd)
         {
-            var romAddress = address - MemoryRegions.RomPage1;
+            var romAddress = address - MemoryRegions.PrgRom;
             if (_cartridge is not null)
             {
                 return _cartridge.PrgRom[romAddress];
@@ -138,7 +138,7 @@ public class Memory : IMemory
             _internalRam[address % MemoryRegions.InternalRamSize] = value;
         }
 
-        if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
+        if (address >= MemoryRegions.PrgRom && address <= MemoryRegions.PrgRomEnd)
         {
             // TODO: Some games have cartridge RAM. But for now, just ignore
             // writes to the cartridge ROM.

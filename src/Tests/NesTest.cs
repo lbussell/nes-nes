@@ -73,7 +73,7 @@ public class NesTest
         var cpu = new Cpu(Registers.Initial, memory, Trace);
         var console = new NesConsole(cpu, ppu, memory);
 
-        var cartridge = CartridgeData.FromBytes(nesTestRom);
+        var cartridge = new CartridgeData(new MemoryStream(nesTestRom));
         console.InsertCartridge(cartridge);
 
         cpu.Registers = cpu.Registers with { PC = initialPc };

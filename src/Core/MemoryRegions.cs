@@ -134,10 +134,9 @@ public static class MemoryRegions
 
     public const ushort OamDma = 0x4014;
 
-    public const ushort RomPage1 = 0x8000;
-    public const ushort RomPage2 = 0xC000;
-    public const ushort RomEnd = 0xFFFF;
-    public const ushort RomPageSize = 0x4000;
+    public const ushort PrgRom = 0x8000;
+    public const ushort PrgRomEnd = 0xFFFF;
+    public const ushort PrgRomSize = PrgRomEnd - PrgRom + 1;
 
     public const ushort NmiVector = 0xFFFA;
     public const ushort ResetVector = 0xFFFC;

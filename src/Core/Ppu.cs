@@ -5,6 +5,11 @@ namespace NesNes.Core;
 
 public delegate void RenderPixel(ushort x, ushort y, byte r, byte g, byte b);
 
+internal static class PpuConsts
+{
+    public const int ChrRomSize = 0x2000; // 8KB
+}
+
 /// <summary>
 /// The NES's PPU is what renders the graphics on the screen.
 /// </summary>

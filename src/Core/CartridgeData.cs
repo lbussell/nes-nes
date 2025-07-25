@@ -3,8 +3,10 @@
 
 namespace NesNes.Core;
 
-public record CartridgeData
+public class CartridgeData
 {
+    private const int TrainerSize = 512;
+
     /// <summary>
     /// Size of a single PRG ROM page in bytes.
     /// </summary>
@@ -15,8 +17,13 @@ public record CartridgeData
     /// </summary>
     public const ushort ChrRomPageSize = 0x2000;
 
-    private readonly byte[] _prgRom;
-    private readonly byte[] _chrRom;
+    private readonly byte[] _rom;
+
+    // The current offset of PrgRom in the rom data.
+    private int _prgRomOffset;
+
+    // The current offset of PrgRom in the rom data.
+    private int _chrRomOffset;
 
     /// <summary>
     /// The cartridge header, which includes metadata about the cartridge's
@@ -24,41 +31,39 @@ public record CartridgeData
     /// </summary>
     public CartridgeHeader Header { get; }
 
-    public ReadOnlySpan<byte> RomPage1 => _prgRom.AsSpan(0, PrgRomPageSize);
-
-    public ReadOnlySpan<byte> RomPage2 => _prgRom.AsSpan(PrgRomPageSize, PrgRomPageSize);
+    /// <summary>
+    /// PRG ROM contains program code.
+    /// </summary>
+    public ReadOnlySpan<byte> PrgRom => _rom.AsSpan(_prgRomOffset, PrgRomPageSize);
 
     /// <summary>
-    /// Contains the PRG ROM data, which contains program code.
+    /// CHR ROM contains graphics data.
     /// </summary>
-    public ReadOnlySpan<byte> PrgRom => _prgRom;
-
-    /// <summary>
-    /// Contains the CHR ROM data, which is used for graphics.
-    /// </summary>
-    public ReadOnlySpan<byte> ChrRom => _chrRom;
-
-    private CartridgeData(CartridgeHeader header, byte[] prgRom, byte[] chrRom)
-    {
-        Header = header;
-        _chrRom = chrRom;
-        _prgRom = prgRom;
-    }
+    public ReadOnlySpan<byte> ChrRom => _rom.AsSpan(_chrRomOffset, ChrRomPageSize);
 
     /// <summary>
     /// Creates a new <see cref="CartridgeData"/> instance from raw ROM data.
     /// </summary>
-    public static CartridgeData FromBytes(ReadOnlySpan<byte> cartridgeData)
+    public CartridgeData(Stream cartridgeData)
     {
-        var headerData = cartridgeData[..CartridgeHeader.Size];
-        var header = new CartridgeHeader(headerData);
+        Span<byte> headerData = stackalloc byte[CartridgeHeader.Size];
+        cartridgeData.ReadExactly(headerData);
 
-        var prgRomOffset = CartridgeHeader.Size;
-        var prgRom = cartridgeData.Slice(prgRomOffset, header.PrgPages * PrgRomPageSize).ToArray();
-        var chrRom = cartridgeData
-            .Slice(prgRomOffset + prgRom.Length, header.ChrPages * ChrRomPageSize)
-            .ToArray();
+        Header = new CartridgeHeader(headerData);
 
-        return new CartridgeData(header, prgRom, chrRom);
+        // Now that we've read and parsed the header, we can go ahead and read
+        // the rest of the cartridge data.
+        cartridgeData.Seek(0, SeekOrigin.Begin);
+        _rom = new byte[cartridgeData.Length];
+        var bytesRead = cartridgeData.Read(_rom);
+        Console.WriteLine($"Read {bytesRead} bytes of ROM data.");
+
+        _prgRomOffset = CartridgeHeader.Size;
+        if (Header.HasTrainer)
+        {
+            _prgRomOffset += TrainerSize;
+        }
+
+        _chrRomOffset = _prgRomOffset + (Header.PrgPages * PrgRomPageSize);
     }
 }
