@@ -24,9 +24,9 @@ public record CartridgeData
     /// </summary>
     public CartridgeHeader Header { get; }
 
-    public ReadOnlySpan<byte> RomPage1 => _prgRom.AsSpan(0, PrgRomPageSize);
+    // public ReadOnlySpan<byte> RomPage1 => _prgRom.AsSpan(0, PrgRomPageSize);
 
-    public ReadOnlySpan<byte> RomPage2 => _prgRom.AsSpan(PrgRomPageSize, PrgRomPageSize);
+    // public ReadOnlySpan<byte> RomPage2 => _prgRom.AsSpan(PrgRomPageSize, PrgRomPageSize);
 
     /// <summary>
     /// Contains the PRG ROM data, which contains program code.
@@ -48,9 +48,11 @@ public record CartridgeData
     /// <summary>
     /// Creates a new <see cref="CartridgeData"/> instance from raw ROM data.
     /// </summary>
-    public static CartridgeData FromBytes(ReadOnlySpan<byte> cartridgeData)
+    public static CartridgeData FromBytes(FileStream cartridgeData)
     {
-        var headerData = cartridgeData[..CartridgeHeader.Size];
+        Span<byte> headerData = stackalloc byte[CartridgeHeader.Size];
+        cartridgeData.ReadExactly(headerData);
+
         var header = new CartridgeHeader(headerData);
 
         var prgRomOffset = CartridgeHeader.Size;
@@ -60,5 +62,36 @@ public record CartridgeData
             .ToArray();
 
         return new CartridgeData(header, prgRom, chrRom);
+    }
+}
+
+internal static class StreamExtensions
+{
+    /// <summary>
+    /// Reads exactly the specified number of bytes from the stream into the buffer.
+    /// </summary>
+    /// <param name="stream">The stream to read from.</param>
+    /// <param name="buffer">The buffer to read data into. The method will read exactly buffer.Length bytes.</param>
+    /// <exception cref="EndOfStreamException">Thrown when the stream ends before the buffer is completely filled.</exception>
+    private static void ReadExactly(this Stream stream, Span<byte> buffer)
+    {
+        // Track how many bytes we've successfully read so far
+        int total = 0;
+
+        // Keep reading until we've filled the entire buffer
+        while (total < buffer.Length)
+        {
+            // Read into the remaining portion of the buffer
+            int n = stream.Read(buffer.Slice(total));
+
+            // If Read() returns 0, we've reached the end of the stream
+            if (n == 0)
+            {
+                throw new EndOfStreamException();
+            }
+
+            // Update our progress counter
+            total += n;
+        }
     }
 }

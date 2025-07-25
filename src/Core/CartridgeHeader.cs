@@ -28,16 +28,23 @@ public record CartridgeHeader
             );
         }
 
-        headerData.CopyTo(_data);
+        PrgPages = headerData[4];
+        ChrPages = headerData[5];
+        Mapper = (byte)((headerData[6] >> 4) | (headerData[7] & 0xF0));
     }
 
     /// <summary>
     /// Size of PRG ROM in 16KB units.
     /// </summary>
-    public byte PrgPages => _data[4];
+    public byte PrgPages { get; }
 
     /// <summary>
-    /// Size of CHR ROM in 8KB units
+    /// Size of CHR ROM in 8KB units. Size of 0 indicates that the cart uses
+    /// CHR RAM instead.
     /// </summary>
-    public byte ChrPages => _data[5];
+    public byte ChrPages { get; }
+
+    public byte Mapper { get; }
+
+    public bool UsesChrRam => ChrPages == 0;
 }
