@@ -9,7 +9,7 @@ public class Memory : IMemory
 
     private readonly byte[] _internalRam = new byte[MemoryRegions.InternalRamSize];
 
-    private CartridgeData? _cartridge = null;
+    private Cartridge? _cartridge = null;
 
     private readonly IMemoryListener[] _listeners;
 
@@ -40,7 +40,7 @@ public class Memory : IMemory
 
     public Action TickCpu { get; set; } = () => { };
 
-    public void LoadRom(CartridgeData cart)
+    public void LoadRom(Cartridge cart)
     {
         // Temporary hacky hack.
         //

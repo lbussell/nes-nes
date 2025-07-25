@@ -101,7 +101,7 @@ public class Ppu : IMemoryListener
     private readonly byte[] _oamData = new byte[0x100];
 
     // Cartridge data which contains the CHR_ROM which is used for tilesets
-    private CartridgeData? _cartridge;
+    private Cartridge? _cartridge;
 
     // The current PPU cycle (0-340). This also roughly corresponds to which
     // pixel is being drawn on the current scanline.
@@ -356,7 +356,7 @@ public class Ppu : IMemoryListener
     /// Load a ROM into the PPU. The PPU needs a reference to the cartridge
     /// since it needs to read CHR_ROM in order to render tile data.
     /// </summary>
-    public void LoadRom(CartridgeData cartridge)
+    public void LoadRom(Cartridge cartridge)
     {
         _cartridge = cartridge;
     }
