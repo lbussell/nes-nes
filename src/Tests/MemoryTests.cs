@@ -15,8 +15,8 @@ public class MemoryTests
         var address = MemoryRegions.InternalRam;
         byte inputValue = 0xAA;
 
-        memory[address] = inputValue;
-        byte outputValue = memory[address];
+        memory.Write(address, inputValue);
+        byte outputValue = memory.Read(address);
 
         outputValue.ShouldBe(inputValue);
     }
@@ -80,13 +80,13 @@ public class MemoryTests
 
         // Write the input value to the base location
         var startingAddress = (ushort)(mirrorStart + offset);
-        memory[startingAddress] = inputValue;
+        memory.Write(startingAddress, inputValue);
 
         // Validate that all mirrored locations contain the same value
         for (int n = 0; n < numberOfMirrors; n += 1)
         {
             var mirrorAddress = (ushort)(mirrorStart + n * mirrorSize + offset);
-            byte outputValue = memory[mirrorAddress];
+            byte outputValue = memory.Read(mirrorAddress);
             outputValue.ShouldBe(
                 inputValue,
                 $"Memory mirroring failed at address: 0x{mirrorAddress:X4}"

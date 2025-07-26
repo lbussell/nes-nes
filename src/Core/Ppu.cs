@@ -299,7 +299,7 @@ public class Ppu : IMemoryListener
             // For now, just read/write to the first nametable only
             var nameTableAddress = address - 0x2000;
             nameTableAddress %= NameTableSize;
-            return _nameTables[(ushort)nameTableAddress];
+            return _nameTables.Read((ushort)nameTableAddress);
         }
         if (address < PaletteRamStart)
         {
@@ -331,7 +331,7 @@ public class Ppu : IMemoryListener
             // For now, just read/write to the first nametable only
             var nameTableAddress = address - 0x2000;
             nameTableAddress %= NameTableSize;
-            _nameTables[(ushort)nameTableAddress] = value;
+            _nameTables.Write((ushort)nameTableAddress, value);
         }
         else if (address < PaletteRamStart)
         {
@@ -384,7 +384,7 @@ public class Ppu : IMemoryListener
         if (_cycle < DisplayWidth && _scanline < DisplayHeight)
         {
             var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
-            var patternTableIndex = _nameTables[(ushort)nameTableIndex];
+            var patternTableIndex = _nameTables.Read((ushort)nameTableIndex);
 
             var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
             var pattern = GetPattern(patternTableIndex, backgroundPatternTable);

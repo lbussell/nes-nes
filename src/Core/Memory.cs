@@ -56,7 +56,7 @@ public class Memory : IMemory
     }
 
     /// <inheritdoc/>
-    public byte Read8(ushort address)
+    public byte Read(ushort address)
     {
         byte value = 0;
         bool wasHandled = false;
@@ -104,7 +104,7 @@ public class Memory : IMemory
     }
 
     /// <inheritdoc/>
-    public void Write8(ushort address, byte value)
+    public void Write(ushort address, byte value)
     {
         if (address == MemoryRegions.OamDma)
         {
@@ -157,7 +157,7 @@ public class Memory : IMemory
         byte data;
         for (int i = 0; i <= 0xFF; i++)
         {
-            data = Read8((ushort)((sourcePage << 8) + i));
+            data = Read((ushort)((sourcePage << 8) + i));
             TickCpu();
 
             _ppu?.WriteOam((byte)i, data);
