@@ -9,7 +9,7 @@ public class Memory : IMemory
 
     private readonly byte[] _internalRam = new byte[MemoryRegions.InternalRamSize];
 
-    private Cartridge? _cartridge = null;
+    private CartridgeData? _cartridge = null;
 
     private readonly IMemoryListener[] _listeners;
 
@@ -40,7 +40,7 @@ public class Memory : IMemory
 
     public Action TickCpu { get; set; } = () => { };
 
-    public void LoadRom(Cartridge cart)
+    public void LoadRom(CartridgeData cart)
     {
         // Temporary hacky hack.
         //
@@ -91,9 +91,9 @@ public class Memory : IMemory
             return _internalRam[address % MemoryRegions.InternalRamSize];
         }
 
-        if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
+        if (address >= MemoryRegions.PrgRom && address <= MemoryRegions.PrgRomEnd)
         {
-            var romAddress = address - MemoryRegions.RomPage1;
+            var romAddress = address - MemoryRegions.PrgRom;
             if (_cartridge is not null)
             {
                 return _cartridge.PrgRom[romAddress];
@@ -138,7 +138,7 @@ public class Memory : IMemory
             _internalRam[address % MemoryRegions.InternalRamSize] = value;
         }
 
-        if (address >= MemoryRegions.RomPage1 && address <= MemoryRegions.RomEnd)
+        if (address >= MemoryRegions.PrgRom && address <= MemoryRegions.PrgRomEnd)
         {
             // TODO: Some games have cartridge RAM. But for now, just ignore
             // writes to the cartridge ROM.

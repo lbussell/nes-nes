@@ -3,7 +3,7 @@
 
 namespace NesNes.Core;
 
-public record Cartridge : IReadable, IWritable
+public class CartridgeData
 {
     private const int TrainerSize = 512;
 
@@ -31,24 +31,20 @@ public record Cartridge : IReadable, IWritable
     /// </summary>
     public CartridgeHeader Header { get; }
 
-    // public ReadOnlySpan<byte> RomPage1 => _prgRom.AsSpan(0, PrgRomPageSize);
-
-    // public ReadOnlySpan<byte> RomPage2 => _prgRom.AsSpan(PrgRomPageSize, PrgRomPageSize);
-
     /// <summary>
-    /// Contains the PRG ROM data, which contains program code.
+    /// PRG ROM contains program code.
     /// </summary>
     public ReadOnlySpan<byte> PrgRom => _rom.AsSpan(_prgRomOffset, PrgRomPageSize);
 
     /// <summary>
-    /// Contains the CHR ROM data, which is used for graphics.
+    /// CHR ROM contains graphics data.
     /// </summary>
     public ReadOnlySpan<byte> ChrRom => _rom.AsSpan(_chrRomOffset, ChrRomPageSize);
 
     /// <summary>
-    /// Creates a new <see cref="Cartridge"/> instance from raw ROM data.
+    /// Creates a new <see cref="CartridgeData"/> instance from raw ROM data.
     /// </summary>
-    public Cartridge(Stream cartridgeData)
+    public CartridgeData(Stream cartridgeData)
     {
         Span<byte> headerData = stackalloc byte[CartridgeHeader.Size];
         cartridgeData.ReadExactly(headerData);
@@ -60,7 +56,7 @@ public record Cartridge : IReadable, IWritable
         cartridgeData.Seek(0, SeekOrigin.Begin);
         _rom = new byte[cartridgeData.Length];
         var bytesRead = cartridgeData.Read(_rom);
-        Console.WriteLine($"Read {bytesRead} of cartridge data.");
+        Console.WriteLine($"Read {bytesRead} bytes of ROM data.");
 
         _prgRomOffset = CartridgeHeader.Size;
         if (Header.HasTrainer)
@@ -70,7 +66,4 @@ public record Cartridge : IReadable, IWritable
 
         _chrRomOffset = _prgRomOffset + (Header.PrgPages * PrgRomPageSize);
     }
-
-    public byte Read(ushort address) => throw new NotImplementedException();
-    public void Write(ushort address, byte value) => throw new NotImplementedException();
 }

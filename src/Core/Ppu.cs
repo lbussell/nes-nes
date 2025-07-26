@@ -5,6 +5,11 @@ namespace NesNes.Core;
 
 public delegate void RenderPixel(ushort x, ushort y, byte r, byte g, byte b);
 
+internal static class PpuConsts
+{
+    public const int ChrRomSize = 0x2000; // 8KB
+}
+
 /// <summary>
 /// The NES's PPU is what renders the graphics on the screen.
 /// </summary>
@@ -101,7 +106,7 @@ public class Ppu : IMemoryListener
     private readonly byte[] _oamData = new byte[0x100];
 
     // Cartridge data which contains the CHR_ROM which is used for tilesets
-    private Cartridge? _cartridge;
+    private CartridgeData? _cartridge;
 
     // The current PPU cycle (0-340). This also roughly corresponds to which
     // pixel is being drawn on the current scanline.
@@ -356,7 +361,7 @@ public class Ppu : IMemoryListener
     /// Load a ROM into the PPU. The PPU needs a reference to the cartridge
     /// since it needs to read CHR_ROM in order to render tile data.
     /// </summary>
-    public void LoadRom(Cartridge cartridge)
+    public void LoadRom(CartridgeData cartridge)
     {
         _cartridge = cartridge;
     }

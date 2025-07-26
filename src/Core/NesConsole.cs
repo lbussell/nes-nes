@@ -15,7 +15,7 @@ public class NesConsole
     private readonly Memory _memory;
     private readonly Controllers _controllers = new();
 
-    private Cartridge? _cartridge = null;
+    private CartridgeData? _cartridge = null;
 
     private int _ppuCyclesForThisScanline = 0;
 
@@ -67,7 +67,7 @@ public class NesConsole
 
     public bool HasCartridge => _cartridge is not null;
 
-    public void InsertCartridge(Cartridge cart)
+    public void InsertCartridge(CartridgeData cart)
     {
         _cartridge = cart;
         _memory.LoadRom(cart);

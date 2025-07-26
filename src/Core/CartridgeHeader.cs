@@ -52,10 +52,21 @@ public record CartridgeHeader
     public byte PrgPages { get; }
 
     /// <summary>
+    /// Size of PRG ROM in bytes.
+    /// </summary>
+    public int PrgRomSize => PrgPages * 0x4000;
+
+    /// <summary>
     /// Size of CHR ROM in 8KB units. Size of 0 indicates that the cart uses
     /// CHR RAM instead.
     /// </summary>
     public byte ChrPages { get; }
+
+    /// <summary>
+    /// Size of CHR ROM in bytes. Size of 0 indicates that the cart uses CHR
+    /// RAM instead.
+    /// </summary>
+    public int ChrRomSize => ChrPages * 0x2000;
 
     public byte Mapper { get; }
 
