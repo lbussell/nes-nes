@@ -15,7 +15,7 @@ public class PpuTests
         const byte ExpectedValue = 0xAB;
 
         IMemory nametables = new DictionaryMemory();
-        nametables[TargetAddress - 0x2000] = ExpectedValue;
+        nametables.Write(TargetAddress - 0x2000, ExpectedValue);
 
         var ppu = new Ppu(nametables);
 

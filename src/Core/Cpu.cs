@@ -1113,7 +1113,7 @@ public class Cpu
 
     private byte Read8(ushort address)
     {
-        var value = _memory.Read8(address);
+        var value = _memory.Read(address);
         Tick();
         return value;
     }
@@ -1130,7 +1130,7 @@ public class Cpu
     private byte Write8(ushort address, byte value)
     {
         // Write a single byte to the specified address.
-        _memory.Write8(address, value);
+        _memory.Write(address, value);
         Tick();
         return value;
     }

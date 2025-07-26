@@ -49,7 +49,7 @@ public class DictionaryMemory : IMemory
     }
 
     /// <inheritdoc/>
-    public byte Read8(ushort address)
+    public byte Read(ushort address)
     {
         if (!_memory.TryGetValue(address, out byte value))
         {
@@ -61,7 +61,7 @@ public class DictionaryMemory : IMemory
     }
 
     /// <inheritdoc/>
-    public void Write8(ushort address, byte value)
+    public void Write(ushort address, byte value)
     {
         _memory[address] = value;
     }
