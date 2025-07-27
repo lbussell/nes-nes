@@ -3,10 +3,6 @@
 
 namespace NesNes.Core;
 
-public interface IBus : ICpuReadable, ICpuWritable
-{
-}
-
 public class Bus : IBus
 {
     public required Ppu Ppu { get; init; }

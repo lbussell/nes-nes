@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using NesNes.Core.Mappers;
+
 namespace NesNes.Core;
 
 public static class MapperFactory

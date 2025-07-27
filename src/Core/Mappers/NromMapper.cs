@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
-namespace NesNes.Core;
+using NesNes.Core;
+
+namespace NesNes.Core.Mappers;
 
 internal class NromMapper : IMapper
 {

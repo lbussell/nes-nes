@@ -85,9 +85,3 @@ public record CartridgeHeader
 
     public bool IsNes2Header { get; }
 }
-
-public enum NametableArrangement
-{
-    Vertical,
-    Horizontal,
-}
