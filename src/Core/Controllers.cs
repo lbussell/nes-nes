@@ -5,7 +5,7 @@ namespace NesNes.Core;
 
 public delegate (byte controller1, byte controller2) ReadControllers();
 
-public class Controllers : IMemoryListener
+public class Controllers
 {
     // Two controllers
     private byte _controller1;

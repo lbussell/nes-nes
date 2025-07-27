@@ -5,17 +5,16 @@ namespace NesNes.Core;
 
 public class EdgeTriggeredFlag
 {
-    private bool _currentState = false;
     private bool _previousState = false;
 
     public void Update(bool value)
     {
-        _previousState = _currentState;
-        _currentState = value;
+        _previousState = Current;
+        Current = value;
     }
 
-    public bool Current => _currentState;
-    public bool Rising => !_previousState && _currentState;
-    public bool Falling => _previousState && !_currentState;
-    public bool JustChanged => _previousState != _currentState;
+    public bool Current { get; private set; } = false;
+    public bool Rising => !_previousState && Current;
+    public bool Falling => _previousState && !Current;
+    public bool JustChanged => _previousState != Current;
 }

@@ -1,89 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
-using System.Drawing;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using NesNes.Gui;
-using NesNes.Core;
-using ImGuiNET;
-
-internal interface IGameWindow : IRenderWindow
-{
-    void OnClose();
-    void OnFramebufferResize(Vector2D<int> newSize);
-}
-
-internal interface IRenderWindow
-{
-    void Render(double deltaTimeSeconds);
-
-    /// <summary>
-    /// Happens before <see cref="Render"/>.
-    /// </summary>
-    /// <param name="deltaTimeSeconds">
-    /// Time in seconds since the last time this method was called.
-    /// </param>
-    void Update(double deltaTimeSeconds);
-}
-
-internal class EmulatorGameWindow(NesConsole console) : IRenderWindow
-{
-    private readonly NesConsole _console = console;
-
-    public void Update(double deltaTimeSeconds)
-    {
-        // Run one frame of emulation
-        for (int i = 0; i < Ppu.Scanlines; i += 1)
-        {
-            _console.StepScanline();
-        }
-    }
-
-    public void Render(double deltaTimeSeconds)
-    {
-        ImGui.ShowAboutWindow();
-    }
-}
-
-internal static class ConsoleExtensions
-{
-    private static readonly Vector2D<int> s_displaySize = new(Ppu.DisplayWidth, Ppu.DisplayHeight);
-
-    public static Vector2D<int> GetDisplaySize(this NesConsole console) => s_displaySize;
-}
-
-internal class GameWindowFactory(
-    NesConsole console
-)
-{
-    private readonly NesConsole _console = console;
-
-    public IGameWindow CreateGameWindow(
-        GL openGl,
-        IInputContext inputContext,
-        ImGuiController imGuiController
-    )
-    {
-        var emulatorGameWindow = new EmulatorGameWindow(_console);
-
-        var gameWindow = new SingleTextureGameWindow(
-            openGl,
-            inputContext,
-            imGuiController,
-            _console.GetDisplaySize(),
-            emulatorGameWindow
-        );
-
-        _console.Ppu.RenderPixelCallback = (x, y, r, g, b) => gameWindow.SetPixel(x, y, r, g, b);
-
-        return gameWindow;
-    }
-
-    public Vector2D<int> DisplaySize => _console.GetDisplaySize();
-}
 
 /// <summary>
 /// <see cref="SingleTextureGameWindow"/> manages all of the graphics for the running game.

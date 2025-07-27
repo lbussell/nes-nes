@@ -3,7 +3,6 @@
 
 using ConsoleAppFramework;
 using NesNes.Core;
-using Silk.NET.Maths;
 using static System.Console;
 
 namespace NesNes.Gui;
