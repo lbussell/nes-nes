@@ -7,11 +7,9 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using NesNes.Core;
 
-internal class GameWindowFactory(
-    NesConsole console
-)
+internal class GameWindowFactory(NesConsole console)
 {
-    private readonly NesConsole _console = console;
+    private readonly NesConsole _emulatorCore = console;
 
     public IGameWindow CreateGameWindow(
         GL openGl,
@@ -19,20 +17,20 @@ internal class GameWindowFactory(
         ImGuiController imGuiController
     )
     {
-        var emulatorGameWindow = new EmulatorGameWindow(_console);
+        var emulator = new Emulator(_emulatorCore);
 
-        var gameWindow = new SingleTextureGameWindow(
+        var gameWindow = new ImGuiGameWindow(
             openGl,
             inputContext,
             imGuiController,
-            _console.GetDisplaySize(),
-            emulatorGameWindow
+            _emulatorCore.GetDisplaySize(),
+            game: emulator
         );
 
-        _console.Ppu.RenderPixelCallback = (x, y, r, g, b) => gameWindow.SetPixel(x, y, r, g, b);
+        _emulatorCore.Ppu.RenderPixelCallback = (x, y, r, g, b) => gameWindow.SetPixel(x, y, r, g, b);
 
         return gameWindow;
     }
 
-    public Vector2D<int> DisplaySize => _console.GetDisplaySize();
+    public Vector2D<int> DisplaySize => _emulatorCore.GetDisplaySize();
 }
