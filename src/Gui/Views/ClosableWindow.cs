@@ -5,8 +5,13 @@ using ImGuiNET;
 
 namespace NesNes.Gui.Views;
 
-internal abstract class ClosableWindow(string name, bool startOpen = false) : IImGuiWindow
+internal abstract class ClosableWindow(
+    string name,
+    ImGuiWindowFlags flags = ImGuiWindowFlags.None,
+    bool startOpen = false
+) : IImGuiWindow
 {
+    private readonly ImGuiWindowFlags _flags = flags;
     private bool _isOpen = startOpen;
 
     public string Name { get; } = name;
@@ -17,7 +22,7 @@ internal abstract class ClosableWindow(string name, bool startOpen = false) : II
     {
         if (_isOpen)
         {
-            ImGui.Begin(Name, ref _isOpen);
+            ImGui.Begin(Name, ref _isOpen, _flags);
             RenderContent(deltaTimeSeconds);
             ImGui.End();
         }
