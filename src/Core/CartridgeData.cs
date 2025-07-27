@@ -32,6 +32,16 @@ public class CartridgeData
     public CartridgeHeader Header { get; }
 
     /// <summary>
+    /// The name of the file that this cartridge data was loaded from.
+    /// </summary>
+    public string Name { get; }
+
+    /// <summary>
+    /// The total size of the cartridge data in bytes.
+    /// </summary>
+    public int Size => _rom.Length;
+
+    /// <summary>
     /// PRG ROM contains program code.
     /// </summary>
     public ReadOnlySpan<byte> PrgRom => _rom.AsSpan(_prgRomOffset, PrgRomPageSize);
@@ -44,12 +54,13 @@ public class CartridgeData
     /// <summary>
     /// Creates a new <see cref="CartridgeData"/> instance from raw ROM data.
     /// </summary>
-    public CartridgeData(Stream cartridgeData)
+    public CartridgeData(Stream cartridgeData, string name = "")
     {
         Span<byte> headerData = stackalloc byte[CartridgeHeader.Size];
         cartridgeData.ReadExactly(headerData);
 
         Header = new CartridgeHeader(headerData);
+        Name = name;
 
         // Now that we've read and parsed the header, we can go ahead and read
         // the rest of the cartridge data.

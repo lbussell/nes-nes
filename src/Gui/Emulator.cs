@@ -3,6 +3,9 @@
 
 using NesNes.Core;
 using ImGuiNET;
+using NesNes.Gui.Views;
+
+namespace NesNes.Gui;
 
 internal class Emulator : IGame
 {
@@ -14,7 +17,8 @@ internal class Emulator : IGame
         _console = console;
         _windows =
         [
-            new ExampleWindow()
+            new ExampleWindow(),
+            new CartridgeInfo(_console.Cartridge!)
         ];
     }
 
