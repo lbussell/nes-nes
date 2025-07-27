@@ -61,7 +61,7 @@ internal class ImGuiGameWindow : IGameWindow
 
         ImGui.DockSpaceOverViewport(0, ImGui.GetMainViewport());
 
-        ImGui.Begin("Game", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoTitleBar);
+        ImGui.Begin("Game", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
         RenderTextureWithIntegerScaling(_texture);
         ImGui.End();
 
