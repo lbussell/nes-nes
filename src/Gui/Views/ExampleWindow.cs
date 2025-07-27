@@ -3,6 +3,8 @@
 
 using ImGuiNET;
 
+namespace NesNes.Gui.Views;
+
 internal class ExampleWindow() : ClosableWindow("Example", startOpen: false)
 {
     protected override void RenderContent(double deltaTimeSeconds)

@@ -70,6 +70,8 @@ public class NesConsole
 
     public int CpuCycles => _cpu.Cycles;
 
+    public CartridgeData? Cartridge => _cartridge;
+
     public bool HasCartridge => _cartridge is not null;
 
     public void InsertCartridge(CartridgeData cartridge)

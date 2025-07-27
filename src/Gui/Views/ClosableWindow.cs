@@ -3,6 +3,8 @@
 
 using ImGuiNET;
 
+namespace NesNes.Gui.Views;
+
 internal abstract class ClosableWindow(string name, bool startOpen = false) : IImGuiWindow
 {
     private bool _isOpen = startOpen;
