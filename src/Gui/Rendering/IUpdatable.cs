@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+namespace NesNes.Gui.Rendering;
+
 internal interface IUpdatable
 {
     /// <summary>
@@ -10,9 +12,4 @@ internal interface IUpdatable
     /// Time in seconds since the last time this method was called.
     /// </param>
     void Update(double deltaTimeSeconds);
-}
-
-internal interface IRenderable
-{
-    void Render(double deltaTimeSeconds);
 }

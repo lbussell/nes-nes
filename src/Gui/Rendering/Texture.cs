@@ -4,7 +4,7 @@
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
-namespace NesNes.Gui;
+namespace NesNes.Gui.Rendering;
 
 public class Texture : IDisposable
 {

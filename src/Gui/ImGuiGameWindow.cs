@@ -7,7 +7,10 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using ImGuiNET;
 using System.Numerics;
-using Texture = NesNes.Gui.Texture;
+using NesNes.Gui.Rendering;
+using Texture = NesNes.Gui.Rendering.Texture;
+
+namespace NesNes.Gui;
 
 /// <summary>
 /// <see cref="ImGuiGameWindow"/> manages all of the graphics for the running game.

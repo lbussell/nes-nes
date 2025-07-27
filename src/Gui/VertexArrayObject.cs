@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using System.Runtime.CompilerServices;
+using NesNes.Gui.Rendering;
 using Silk.NET.OpenGL;
 
 namespace NesNes.Gui;
