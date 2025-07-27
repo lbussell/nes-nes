@@ -26,6 +26,12 @@ public class Bus : IBus
         {
             return Ppu.CpuRead(address);
         }
+        else if (address < 0x4020)
+        {
+            // IO registers - not implemented yet
+            // Controllers, APU, etc.
+            return 0;
+        }
         else if (Mapper is not null && address >= MemoryRegions.PrgRom)
         {
             return Mapper.CpuRead(address);
