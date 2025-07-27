@@ -3,7 +3,7 @@
 
 using Silk.NET.OpenGL;
 
-namespace NesNes.Gui;
+namespace NesNes.Gui.Rendering;
 
 public class BufferObject<T> : IDisposable where T : unmanaged
 {

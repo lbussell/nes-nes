@@ -3,6 +3,8 @@
 
 using Silk.NET.Maths;
 
+namespace NesNes.Gui.Rendering;
+
 internal interface IGameWindow : IUpdatable, IRenderable
 {
     void OnClose();

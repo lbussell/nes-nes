@@ -7,9 +7,13 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using NesNes.Core;
 
+namespace NesNes.Gui.Rendering;
+
 internal class GameWindowFactory(NesConsole console)
 {
     private readonly NesConsole _emulatorCore = console;
+
+    private readonly Vector2D<int> _internalSize = new(256, 240);
 
     public IGameWindow CreateGameWindow(
         GL openGl,
@@ -23,7 +27,7 @@ internal class GameWindowFactory(NesConsole console)
             openGl,
             inputContext,
             imGuiController,
-            _emulatorCore.GetDisplaySize(),
+            _internalSize,
             game: emulator
         );
 
@@ -31,6 +35,4 @@ internal class GameWindowFactory(NesConsole console)
 
         return gameWindow;
     }
-
-    public Vector2D<int> DisplaySize => _emulatorCore.GetDisplaySize();
 }

@@ -11,6 +11,8 @@ using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
 using Silk.NET.Windowing.Glfw;
 
+namespace NesNes.Gui.Rendering;
+
 class WindowManager
 {
     private readonly IWindow _window;
@@ -18,11 +20,7 @@ class WindowManager
 
     private readonly ServiceCollection _services = new();
 
-    public WindowManager(
-        GameWindowFactory gameWindowFactory,
-        int scale = 1,
-        string title = "New Window"
-    )
+    public WindowManager(GameWindowFactory gameWindowFactory, string title)
     {
         _gameWindowFactory = gameWindowFactory;
 
@@ -35,7 +33,7 @@ class WindowManager
         var windowOptions = new WindowOptions(
             isVisible: true,
             position: new Vector2D<int>(50, 50),
-            size: scale * gameWindowFactory.DisplaySize,
+            size: new Vector2D<int>(1280, 720),
             framesPerSecond: 60.0,
             updatesPerSecond: 60.0,
             api: GraphicsAPI.Default,

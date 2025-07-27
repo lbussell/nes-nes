@@ -3,6 +3,7 @@
 
 using ConsoleAppFramework;
 using NesNes.Core;
+using NesNes.Gui.Rendering;
 using static System.Console;
 
 namespace NesNes.Gui;
@@ -31,11 +32,7 @@ internal sealed class Cli
         console.InsertCartridge(cartridge);
 
         var gameWindowFactory = new GameWindowFactory(console);
-        var window = new WindowManager(
-            gameWindowFactory,
-            scale: 3,
-            romFileName
-        );
+        var window = new WindowManager(gameWindowFactory, title: romFileName);
 
         window.Run();
     }
