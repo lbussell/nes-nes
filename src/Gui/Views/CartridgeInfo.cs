@@ -8,9 +8,17 @@ namespace NesNes.Gui.Views;
 
 internal class CartridgeInfo : ClosableWindow
 {
+    private const ImGuiTableFlags TableFlags =
+        ImGuiTableFlags.Borders
+        | ImGuiTableFlags.RowBg;
+
+    private const ImGuiWindowFlags WindowFlags =
+        ImGuiWindowFlags.AlwaysAutoResize;
+
     private readonly (string, string)[] _tableRows;
 
-    public CartridgeInfo(CartridgeData cartridge) : base("Cartridge Info", startOpen: false)
+    public CartridgeInfo(CartridgeData cartridge)
+        : base("Cartridge Info", WindowFlags, startOpen: false)
     {
         var header = cartridge.Header;
         _tableRows =
@@ -36,7 +44,7 @@ internal class CartridgeInfo : ClosableWindow
 
     private void RenderTable()
     {
-        if (ImGui.BeginTable("Cartridge Info", 2))
+        if (ImGui.BeginTable("Cartridge Info", 2, TableFlags))
         {
             foreach (var (label, value) in _tableRows)
             {
