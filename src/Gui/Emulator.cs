@@ -17,8 +17,8 @@ internal class Emulator : IGame
         _console = console;
         _windows =
         [
-            new ExampleWindow(),
-            new CartridgeInfo(_console.Cartridge!)
+            new CartridgeInfo(_console.Cartridge!),
+            new CpuStateWindow(_console),
         ];
     }
 
