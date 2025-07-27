@@ -20,7 +20,7 @@ internal static class PpuConsts
 /// The PPU's registers are mapped to $2000-$2007 (and mirrored all the way up
 /// to $4000) on the main memory bus.
 /// <remarks/>
-public class Ppu : IMemoryListener
+public class Ppu : ICpuReadable, ICpuWritable
 {
     #region Constants
 
@@ -99,14 +99,8 @@ public class Ppu : IMemoryListener
 
     private readonly PpuAddrRegister _addressRegister = new();
     private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
-    private readonly IMemory _nameTables;
-    private ReadOnlySpan<byte> _patternTables =>
-        _cartridge is not null ? _cartridge.ChrRom : throw new InvalidOperationException();
     private readonly byte[] _paletteRam = new byte[0x20];
     private readonly byte[] _oamData = new byte[0x100];
-
-    // Cartridge data which contains the CHR_ROM which is used for tilesets
-    private CartridgeData? _cartridge;
 
     // The current PPU cycle (0-340). This also roughly corresponds to which
     // pixel is being drawn on the current scanline.
@@ -123,22 +117,7 @@ public class Ppu : IMemoryListener
     // register.
     private byte _openBus;
 
-    /// <summary>
-    /// Creates a new instance of the PPU.
-    /// </summary>
-    /// <param name="initialNametables"></param>
-    public Ppu(IMemory? initialNametables = null)
-    {
-        _nameTables = initialNametables ?? new SimpleMemory(2 * NameTableSize);
-    }
-
-    public int Scanline => _scanline;
-
-    public int Cycle => _cycle;
-
-    public ReadOnlySpan<byte> PatternTables => _patternTables;
-
-    public IMemory NameTables => _nameTables;
+    public IMapper? Mapper { get; set; } = null;
 
     /// <summary>
     /// This is called whenever a pixel is rendered.
@@ -179,20 +158,34 @@ public class Ppu : IMemoryListener
         set => SetRegisterBit(PpuCtrl, 1 << 2, value);
     }
 
-    /// <inheritdoc/>
-    public bool ListenRead(ushort address, out byte value)
+    /// <summary>
+    /// This method should be called by the CPU to interact with the PPU.
+    /// </summary>
+    /// <param name="address">
+    /// The address in CPU memory space to read from.
+    /// </param>
+    /// <returns>
+    /// The data from that address/pin returned by the PPU.
+    /// </returns>
+    public byte CpuRead(ushort address)
     {
         address = MapToMirroredRegisterAddress(address);
-        value = ReadInternalRegister(address);
-        return true;
+        return ReadInternalRegister(address);
     }
 
-    /// <inheritdoc/>
-    public bool ListenWrite(ushort address, byte value)
+    /// <summary>
+    /// This method should be called by the CPU to write to the PPU's registers.
+    /// </summary>
+    /// <param name="address">
+    /// The address in CPU memory space to write to.
+    /// </param>
+    /// <param name="value">
+    /// This value will be given to the PPU to do whatever it wants with.
+    /// </param>
+    public void CpuWrite(ushort address, byte value)
     {
         address = MapToMirroredRegisterAddress(address);
         WriteInternalRegister(address, value);
-        return true;
     }
 
     public void WriteOam(byte address, byte value)
@@ -289,17 +282,9 @@ public class Ppu : IMemoryListener
 
     private byte ReadMemory(ushort address)
     {
-        if (address < PatternTablesEnd)
+        if (address < 0x3000)
         {
-            return _cartridge?.ChrRom[address] ?? 0;
-        }
-        if (address < NameTablesEnd)
-        {
-            // TODO: Implement nametable mirroring
-            // For now, just read/write to the first nametable only
-            var nameTableAddress = address - 0x2000;
-            nameTableAddress %= NameTableSize;
-            return _nameTables.Read((ushort)nameTableAddress);
+            return Mapper?.PpuRead(address) ?? 0;
         }
         if (address < PaletteRamStart)
         {
@@ -327,11 +312,7 @@ public class Ppu : IMemoryListener
         }
         else if (address < NameTablesEnd)
         {
-            // TODO: Implement nametable mirroring
-            // For now, just read/write to the first nametable only
-            var nameTableAddress = address - 0x2000;
-            nameTableAddress %= NameTableSize;
-            _nameTables.Write((ushort)nameTableAddress, value);
+            Mapper?.PpuWrite(address, value);
         }
         else if (address < PaletteRamStart)
         {
@@ -358,15 +339,6 @@ public class Ppu : IMemoryListener
     }
 
     /// <summary>
-    /// Load a ROM into the PPU. The PPU needs a reference to the cartridge
-    /// since it needs to read CHR_ROM in order to render tile data.
-    /// </summary>
-    public void LoadRom(CartridgeData cartridge)
-    {
-        _cartridge = cartridge;
-    }
-
-    /// <summary>
     /// Advance the PPU by one cycle.
     /// </summary>
     private void Step()
@@ -384,7 +356,7 @@ public class Ppu : IMemoryListener
         if (_cycle < DisplayWidth && _scanline < DisplayHeight)
         {
             var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
-            var patternTableIndex = _nameTables.Read((ushort)nameTableIndex);
+            var patternTableIndex = Mapper!.PpuRead((ushort)nameTableIndex);
 
             var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
             var pattern = GetPattern(patternTableIndex, backgroundPatternTable);
@@ -447,7 +419,7 @@ public class Ppu : IMemoryListener
     // Convert a pixel coordinate (scanline, cycle) to a name table index (32x30).
     private static int PixelToNameTableIndex(int scanline, int cycle)
     {
-        return (scanline / 8) * 32 + (cycle / 8);
+        return 0x2000 + (scanline / 8) * 32 + (cycle / 8);
     }
 
     /// <summary>
@@ -456,7 +428,7 @@ public class Ppu : IMemoryListener
     public ReadOnlySpan<byte> GetPattern(int patternIndex, int table = 0)
     {
         var patternTableOffset = (patternIndex * BytesPerTile) + (table * PatternTableSizeBytes);
-        return _patternTables.Slice(patternTableOffset, BytesPerTile);
+        return Mapper!.PpuRead((ushort)patternTableOffset, BytesPerTile);
     }
 
     /// <summary>
@@ -471,7 +443,7 @@ public class Ppu : IMemoryListener
         int patternTableOffset = patternIndex * BytesPerTile;
         patternTableOffset += table * PatternTableSizeBytes;
 
-        var pattern = _patternTables.Slice(patternTableOffset, BytesPerTile);
+        var pattern = Mapper!.PpuRead((ushort)patternTableOffset, BytesPerTile);
         return pattern;
     }
 

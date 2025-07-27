@@ -21,13 +21,6 @@ public record CartridgeHeader
         }
 
         Mapper = (byte)((headerData[6] >> 4) | (headerData[7] & 0xF0));
-        if (Mapper != 0)
-        {
-            throw new NotSupportedException(
-                $"Mapper {Mapper} is not supported yet. " +
-                "Only mapper 0 (NROM) is currently supported."
-            );
-        }
 
         PrgPages = headerData[4];
         ChrPages = headerData[5];
