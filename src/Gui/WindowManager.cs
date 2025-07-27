@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using ImGuiNET;
 using Microsoft.Extensions.DependencyInjection;
 using Silk.NET.Input;
 using Silk.NET.Input.Glfw;
@@ -40,7 +41,7 @@ class WindowManager
             api: GraphicsAPI.Default,
             title: title,
             windowState: WindowState.Normal,
-            windowBorder: WindowBorder.Fixed,
+            windowBorder: WindowBorder.Resizable,
             isVSync: true,
             shouldSwapAutomatically: true,
             videoMode: VideoMode.Default
@@ -66,11 +67,19 @@ class WindowManager
         IInputContext inputContext = _window.CreateInput();
         _services.AddSingleton(inputContext);
 
-        _services.AddSingleton(serviceProvider => new ImGuiController(
-            serviceProvider.GetRequiredService<GL>(),
-            serviceProvider.GetRequiredService<IWindow>(),
-            serviceProvider.GetRequiredService<IInputContext>()
-        ));
+        _services.AddSingleton(serviceProvider =>
+        {
+            var imGuiController = new ImGuiController(
+                serviceProvider.GetRequiredService<GL>(),
+                serviceProvider.GetRequiredService<IWindow>(),
+                serviceProvider.GetRequiredService<IInputContext>()
+            );
+
+            var io = ImGui.GetIO();
+            io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+
+            return imGuiController;
+        });
 
         var serviceProvider = _services.BuildServiceProvider();
         IGameWindow window = _gameWindowFactory.CreateGameWindow(
