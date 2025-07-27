@@ -31,13 +31,12 @@ internal sealed class Cli
         console.InsertCartridge(cartridge);
 
         var gameWindowFactory = new GameWindowFactory(console);
-        using var window = new WindowManager(
+        var window = new WindowManager(
             gameWindowFactory,
             scale: 3,
             "JANE"
         );
 
         window.Run();
-        window.Dispose();
     }
 }

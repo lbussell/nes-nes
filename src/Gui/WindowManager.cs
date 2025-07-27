@@ -10,7 +10,7 @@ using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
 using Silk.NET.Windowing.Glfw;
 
-class WindowManager : IDisposable
+class WindowManager
 {
     private readonly IWindow _window;
     private readonly GameWindowFactory _gameWindowFactory;
@@ -50,9 +50,11 @@ class WindowManager : IDisposable
         _window.Load += OnLoad;
     }
 
-    public void Run() => _window.Run();
-
-    public void Dispose() => _window.Dispose();
+    public void Run()
+    {
+        _window.Run();
+        _window.Dispose();
+    }
 
     private void OnLoad()
     {

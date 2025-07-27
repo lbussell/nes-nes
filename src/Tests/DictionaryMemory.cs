@@ -10,7 +10,7 @@ namespace NesNes.Tests;
 /// Only stores memory that has been explicitly written to or initialized.
 /// Throws an exception when reading from uninitialized memory locations.
 /// </summary>
-public class DictionaryMemory : IMemory
+public class DictionaryMemory : IBus
 {
     private readonly Dictionary<ushort, byte> _memory;
 
@@ -49,7 +49,7 @@ public class DictionaryMemory : IMemory
     }
 
     /// <inheritdoc/>
-    public byte Read(ushort address)
+    public byte CpuRead(ushort address)
     {
         if (!_memory.TryGetValue(address, out byte value))
         {
@@ -61,7 +61,7 @@ public class DictionaryMemory : IMemory
     }
 
     /// <inheritdoc/>
-    public void Write(ushort address, byte value)
+    public void CpuWrite(ushort address, byte value)
     {
         _memory[address] = value;
     }

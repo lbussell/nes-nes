@@ -8,19 +8,6 @@ namespace NesNes.Tests;
 
 public class MemoryTests
 {
-    [Fact]
-    public void ReadWriteMemory()
-    {
-        IMemory memory = new Memory();
-        var address = MemoryRegions.InternalRam;
-        byte inputValue = 0xAA;
-
-        memory.Write(address, inputValue);
-        byte outputValue = memory.Read(address);
-
-        outputValue.ShouldBe(inputValue);
-    }
-
     [Theory]
     [InlineData(0x0000, 0xAA)]
     [InlineData(0x0123, 0xAA)]
@@ -75,18 +62,21 @@ public class MemoryTests
     )
     {
         var ppu = new Ppu();
-        IMemory memory = new Memory(ppu);
+        IBus bus = new Bus()
+        {
+            Ppu = ppu
+        };
         var numberOfMirrors = (mirrorEnd - mirrorStart - 1) / mirrorSize;
 
         // Write the input value to the base location
         var startingAddress = (ushort)(mirrorStart + offset);
-        memory.Write(startingAddress, inputValue);
+        bus.CpuWrite(startingAddress, inputValue);
 
         // Validate that all mirrored locations contain the same value
         for (int n = 0; n < numberOfMirrors; n += 1)
         {
             var mirrorAddress = (ushort)(mirrorStart + n * mirrorSize + offset);
-            byte outputValue = memory.Read(mirrorAddress);
+            byte outputValue = bus.CpuRead(mirrorAddress);
             outputValue.ShouldBe(
                 inputValue,
                 $"Memory mirroring failed at address: 0x{mirrorAddress:X4}"

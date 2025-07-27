@@ -68,6 +68,19 @@ internal class Banking
         );
     }
 
+    public static Banking CreateNametable(CartridgeHeader header)
+    {
+        // header is unused for now, but we'll need to check it for later for
+        // some special mappers that have 4-screen mirroring modes.
+
+        return new Banking(
+            numberOfSlots: 4,
+            slotSize: 0x400,
+            startAddress: 0x2000,
+            totalBankingSize: 0x0800
+        );
+    }
+
     public void SetSlot(int slotNumber, int bankNumber)
     {
         _slots[slotNumber] = (ushort)(bankNumber * _slotSize);
@@ -87,10 +100,4 @@ internal class Banking
         // Make sure to wrap around the address just in case it overflows.
         return (ushort)(bankAddress + (address % _slotSize));
     }
-
-    /// <summary>
-    /// Given an address in local address space (starting at 0), returns the
-    /// address within the slot that this address belongs to.
-    /// </summary>
-    private int GetBankAddress(ushort localAddress) => localAddress % _slotSize;
 }

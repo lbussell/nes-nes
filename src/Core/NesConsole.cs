@@ -12,7 +12,7 @@ public class NesConsole
 
     private readonly Cpu _cpu;
     private readonly Ppu _ppu;
-    private readonly Memory _memory;
+    private readonly Bus _bus;
     private readonly Controllers _controllers = new();
 
     private CartridgeData? _cartridge = null;
@@ -23,11 +23,11 @@ public class NesConsole
 
     public Ppu Ppu => _ppu;
 
-    public NesConsole(Cpu cpu, Ppu ppu, Memory memory)
+    public NesConsole(Cpu cpu, Ppu ppu, Bus bus)
     {
         _cpu = cpu;
         _ppu = ppu;
-        _memory = memory;
+        _bus = bus;
     }
 
     /// <summary>
@@ -40,16 +40,21 @@ public class NesConsole
     )
     {
         _ppu = new Ppu();
-        _memory = new Memory(_ppu, _controllers);
+
+        _bus = new Bus()
+        {
+            Ppu = _ppu,
+        };
+
         var registers = Registers.Initial;
 
         _cpu = new Cpu(
             registers: registers,
-            memory: _memory,
+            bus: _bus,
             logCpuState: logCpuState,
             tickCallback: () => Tick()
         );
-        _memory.TickCpu = _cpu.Tick;
+        _bus.TickCpu = _cpu.Tick;
 
         // The CPU checks some pins on the PPU to determine if an NMI is pending.
         _cpu.CheckNmiPins = () => _ppu.NmiInterrupt;
@@ -67,11 +72,14 @@ public class NesConsole
 
     public bool HasCartridge => _cartridge is not null;
 
-    public void InsertCartridge(CartridgeData cart)
+    public void InsertCartridge(CartridgeData cartridge)
     {
-        _cartridge = cart;
-        _memory.LoadRom(cart);
-        _ppu.LoadRom(cart);
+        _cartridge = cartridge;
+        var mapper = MapperFactory.Create(_cartridge);
+
+        _ppu.Mapper = mapper;
+        _bus.Mapper = mapper;
+
         Reset();
     }
 
