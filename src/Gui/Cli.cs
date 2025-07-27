@@ -18,10 +18,11 @@ internal sealed class Cli
     {
         var romFileStream = File.OpenRead(rom);
         var cartridge = new CartridgeData(romFileStream);
+        var romFileName = Path.GetFileName(rom);
 
         WriteLine(
             $"""
-            Loaded ROM: {Path.GetFileName(rom)}
+            Loaded ROM: {romFileName}
             {cartridge}
             """
         );
@@ -33,7 +34,7 @@ internal sealed class Cli
         var window = new WindowManager(
             gameWindowFactory,
             scale: 3,
-            "JANE"
+            romFileName
         );
 
         window.Run();
