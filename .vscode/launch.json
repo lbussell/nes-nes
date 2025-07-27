@@ -11,18 +11,6 @@
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/src/Gui/bin/Debug/net10.0/NesNes.Gui.dll",
             "args": [],
-            // "cwd": "${workspaceFolder}/src/Gui",
-            "stopAtEntry": false,
-            "console": "internalConsole"
-        },
-        {
-            "name": "Run nestest.nes",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/Host/bin/Debug/net10.0/NesNes.Host.dll",
-            "args": ["--rom", "${workspaceFolder}/src/Tests/TestData/nestest/nestest.nes"],
-            "cwd": "${workspaceFolder}/src/Host",
             "stopAtEntry": false,
             "console": "internalConsole"
         },
