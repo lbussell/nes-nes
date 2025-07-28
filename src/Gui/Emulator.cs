@@ -10,7 +10,7 @@ namespace NesNes.Gui;
 internal class Emulator : IGame
 {
     private readonly NesConsole _console;
-    private readonly ClosableWindow[] _windows;
+    private readonly IClosableWindow[] _windows;
 
     public Emulator(NesConsole console)
     {
@@ -19,6 +19,7 @@ internal class Emulator : IGame
         [
             new CartridgeInfo(_console.Cartridge!),
             new CpuStateWindow(_console),
+            new ImGuiMetrics(),
         ];
     }
 
@@ -41,7 +42,7 @@ internal class Emulator : IGame
         }
     }
 
-    private static void RenderMainMenuBar(ClosableWindow[] _windows)
+    private static void RenderMainMenuBar(IClosableWindow[] _windows)
     {
         if (ImGui.BeginMainMenuBar())
         {
@@ -58,6 +59,6 @@ internal class Emulator : IGame
         }
     }
 
-    private static void RenderWindowViewMenuItem(ClosableWindow window) =>
+    private static void RenderWindowViewMenuItem(IClosableWindow window) =>
         ImGui.MenuItem(window.Name, shortcut: null, ref window.Open);
 }

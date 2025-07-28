@@ -9,7 +9,7 @@ internal abstract class ClosableWindow(
     string name,
     ImGuiWindowFlags flags = ImGuiWindowFlags.None,
     bool startOpen = false
-) : IImGuiWindow
+) : IClosableWindow
 {
     private readonly ImGuiWindowFlags _flags = flags;
     private bool _isOpen = startOpen;
