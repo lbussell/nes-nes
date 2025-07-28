@@ -237,7 +237,8 @@ public class Ppu : ICpuReadable, ICpuWritable
                 _dataBuffer = ReadMemory(_addressRegister.Value);
 
                 // Palette RAM can be read immediately without going through the data buffer
-                if (_addressRegister.Value >= PaletteRamStart && _addressRegister.Value < PaletteRamEnd)
+                if (_addressRegister.Value >= PaletteRamStart
+                    && _addressRegister.Value < PaletteRamEnd)
                 {
                     _openBus = _dataBuffer;
                 }
@@ -353,6 +354,7 @@ public class Ppu : ICpuReadable, ICpuWritable
             var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
             var patternTableIndex = Mapper!.PpuRead((ushort)nameTableIndex);
 
+            // Decide which pattern table to use based on the PPU control register
             var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
             var pattern = GetPattern(patternTableIndex, backgroundPatternTable);
 
@@ -445,30 +447,36 @@ public class Ppu : ICpuReadable, ICpuWritable
     /// <summary>
     /// Temporary, used only to visualize the pattern table.
     /// </summary>
-    public Color GetPatternTablePixel(int pixelRow, int pixelCol, bool useGrayscale = true)
+    public Color GetPatternTablePixel(
+        int pixelRow,
+        int pixelCol,
+        int table,
+        bool useGrayscale = true
+    )
     {
-        // Display color palettes on top of the pattern table for now
-        const int PaletteVisualizationSize = 4;
-        const int TotalPaletteColors = 8 * 4;
-        if (pixelRow < PaletteVisualizationSize && pixelCol < TotalPaletteColors * PaletteVisualizationSize)
-        {
-            pixelCol /= PaletteVisualizationSize;
-            var paletteColor = GetPaletteColor(
-                paletteNumber: pixelCol / 4,
-                colorIndex: pixelCol % 4
-            );
-
-            return paletteColor;
-        }
-
         // The second pattern table is located directly to the right of the first
-        int patternTableNumber = pixelCol >= PatternTablePixelWidth ? 1 : 0;
-        var pattern = GetPattern(pixelRow, pixelCol % PatternTablePixelWidth, patternTableNumber);
+        // int patternTableNumber = pixelCol >= PatternTablePixelWidth ? 1 : 0;
+        var pattern = GetPattern(pixelRow, pixelCol, table);
 
         // Use the first background palette for pattern table visualization
-        var colorIndex = GetBackgroundPixelColorIndex(pattern, pixelRow % PatternSize, pixelCol % PatternSize);
-        var color = GetPaletteColor(paletteNumber: 0, colorIndex);
-        return color;
+        var colorIndex = GetBackgroundPixelColorIndex(
+            pattern,
+            pixelRow % PatternSize,
+            pixelCol % PatternSize
+        );
+
+        if (useGrayscale)
+        {
+            // For pattern table visualization, use grayscale based on the pattern data
+            // This bypasses the palette system and shows the raw pattern data
+            var grayValue = (byte)(colorIndex * 85); // 0, 85, 170, 255 for values 0, 1, 2, 3
+            return new Color(grayValue, grayValue, grayValue);
+        }
+        else
+        {
+            var color = GetPaletteColor(paletteNumber: 0, colorIndex);
+            return color;
+        }
     }
 
     /// <summary>
@@ -528,8 +536,12 @@ public class Ppu : ICpuReadable, ICpuWritable
     /// <summary>
     /// Get the color index of a background pixel.
     /// </summary>
+    /// <param name="pattern">
+    /// The pattern data for the tile, which must be 16 bytes long.
+    /// </param>
     /// <returns>
-    /// The color index into a single color palette. This is always a value of 0, 1, 2, or 3.
+    /// The pixel's index into the color palette for the tile. This is always a
+    /// value of 0, 1, 2, or 3.
     /// </returns>
     private static byte GetBackgroundPixelColorIndex(
         ReadOnlySpan<byte> pattern,

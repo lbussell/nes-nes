@@ -13,7 +13,7 @@ internal class Emulator : IGame
     private readonly IClosableWindow[] _windows;
     private bool _isPaused = false;
 
-    public Emulator(NesConsole console)
+    public Emulator(NesConsole console, PatternTableViewer patternTableViewer)
     {
         _console = console;
 
@@ -30,6 +30,7 @@ internal class Emulator : IGame
             debuggerControls,
             new CartridgeInfo(_console.Cartridge!),
             new CpuStateWindow(_console),
+            patternTableViewer,
             new ImGuiMetrics(),
         ];
     }
