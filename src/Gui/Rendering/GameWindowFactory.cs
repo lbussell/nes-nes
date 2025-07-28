@@ -6,6 +6,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using NesNes.Core;
+using NesNes.Gui.Views;
 
 namespace NesNes.Gui.Rendering;
 
@@ -21,7 +22,12 @@ internal class GameWindowFactory(NesConsole console)
         ImGuiController imGuiController
     )
     {
-        var emulator = new Emulator(_emulatorCore);
+        var patternTableViewer = new PatternTableViewer(
+            openGl,
+            _emulatorCore
+        );
+
+        var emulator = new Emulator(_emulatorCore, patternTableViewer);
 
         var gameWindow = new ImGuiGameWindow(
             openGl,
@@ -31,7 +37,8 @@ internal class GameWindowFactory(NesConsole console)
             game: emulator
         );
 
-        _emulatorCore.Ppu.RenderPixelCallback = (x, y, r, g, b) => gameWindow.SetPixel(x, y, r, g, b);
+        _emulatorCore.Ppu.RenderPixelCallback =
+            (x, y, r, g, b) => gameWindow.SetPixel(x, y, r, g, b);
 
         return gameWindow;
     }
