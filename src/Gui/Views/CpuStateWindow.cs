@@ -40,6 +40,7 @@ internal class CpuStateWindow(NesConsole console)
     {
         ImGui.SeparatorText("CPU");
 
+        ImGui.AlignTextToFramePadding();
         ImGui.Text("Cycles");
         ImGui.SameLine();
         ImGui.Button(_console.CpuCycles.ToString());
@@ -47,6 +48,7 @@ internal class CpuStateWindow(NesConsole console)
         ImGui.SeparatorText("Registers");
         var registers = _cpu.Registers;
 
+        ImGui.AlignTextToFramePadding();
         RenderUshort("PC", registers.PC);
 
         ImGui.SameLine();
