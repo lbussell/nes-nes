@@ -11,12 +11,23 @@ internal class Emulator : IGame
 {
     private readonly NesConsole _console;
     private readonly IClosableWindow[] _windows;
+    private bool _isPaused = false;
 
     public Emulator(NesConsole console)
     {
         _console = console;
+
+        var debuggerControls = new DebuggerControlsWindow
+        {
+            OnTogglePause = OnTogglePause,
+            OnStepScanline = OnStepScanline,
+            OnStepFrame = OnStepFrame,
+            OnReset = OnReset
+        };
+
         _windows =
         [
+            debuggerControls,
             new CartridgeInfo(_console.Cartridge!),
             new CpuStateWindow(_console),
             new ImGuiMetrics(),
@@ -25,11 +36,36 @@ internal class Emulator : IGame
 
     public void Update(double deltaTimeSeconds)
     {
+        if (_isPaused)
+        {
+            return;
+        }
+
         // Run one frame of emulation
+        OnStepFrame();
+    }
+
+    private void OnTogglePause()
+    {
+        _isPaused = !_isPaused;
+    }
+
+    private void OnStepScanline()
+    {
+        _console.StepScanline();
+    }
+
+    private void OnStepFrame()
+    {
         for (int i = 0; i < Ppu.Scanlines; i += 1)
         {
             _console.StepScanline();
         }
+    }
+
+    private void OnReset()
+    {
+        _console.Reset();
     }
 
     public void Render(double deltaTimeSeconds)
