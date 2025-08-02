@@ -1,9 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Numerics;
-using ImGuiNET;
 using NesNes.Core;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
@@ -16,43 +13,29 @@ internal class PatternTableViewer : ClosableWindow
     private readonly NesConsole _console;
     private readonly Texture _texture;
     private bool _grayscale = false;
-    private int _table = 0;
 
     private double _timeSinceLastUpdate = 0.0;
-    private const double UpdateInterval = 1.0 / 60.0; // 1/60th of a second
 
-    private static readonly Vector2D<int> s_patternTableSize =
-        new(Ppu.PatternTablePixelWidth, Ppu.PatternTablePixelHeight);
-        // new(Ppu.PatternTablePixelWidth, 2 * Ppu.PatternTablePixelHeight);
+    // Only update the texture every 1/30th of a second
+    private const double UpdateInterval = 1.0 / 30.0;
 
-    private static readonly Vector2 s_patternTableSizeFloat =
-        new(Ppu.PatternTablePixelWidth, Ppu.PatternTablePixelHeight);
-        // new(Ppu.PatternTablePixelWidth, 2 * Ppu.PatternTablePixelHeight);
+    /// <summary>
+    /// Size of both pattern tables, stacked on top of each other vertically.
+    /// </summary>
+    private static readonly Vector2D<int> s_patternTablesSize =
+        new(Ppu.PatternTablePixelWidth, 2 * Ppu.PatternTablePixelHeight);
 
     public PatternTableViewer(GL openGl, NesConsole console)
         : base("Pattern Tables", startOpen: true)
     {
         _console = console;
-        _texture = new Texture(openGl, s_patternTableSize);
+        _texture = new Texture(openGl, s_patternTablesSize);
         UpdateTexture();
     }
 
     protected override void RenderContent(double deltaTimeSeconds)
     {
         var shouldUpdate = false;
-
-        if (ImGui.Checkbox("Grayscale", ref _grayscale))
-        {
-            shouldUpdate = true; // Force immediate update when grayscale changes
-        }
-
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(100);
-        ImGui.InputInt("Table", ref _table, 1, 1);
-
-        // Ensure table is always 0 or 1
-        _table %= 2;
-
         _timeSinceLastUpdate += deltaTimeSeconds;
         if (_timeSinceLastUpdate >= UpdateInterval)
         {
@@ -70,15 +53,16 @@ internal class PatternTableViewer : ClosableWindow
 
     private void UpdateTexture()
     {
-
-        for (int pixelRow = 0; pixelRow < s_patternTableSize.Y; pixelRow += 1)
+        for (int pixelRow = 0; pixelRow < s_patternTablesSize.Y; pixelRow += 1)
         {
-            for (int pixelCol = 0; pixelCol < s_patternTableSize.X; pixelCol += 1)
+            var table = pixelRow < Ppu.PatternTablePixelHeight ? 0 : 1;
+
+            for (int pixelCol = 0; pixelCol < s_patternTablesSize.X; pixelCol += 1)
             {
                 var color = _console.Ppu.GetPatternTablePixel(
-                    pixelRow,
+                    pixelRow % Ppu.PatternTablePixelHeight,
                     pixelCol,
-                    _table,
+                    table,
                     _grayscale
                 );
                 _texture.SetPixel(pixelCol, pixelRow, color.R, color.G, color.B, 0xFF);

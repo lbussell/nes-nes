@@ -455,7 +455,6 @@ public class Ppu : ICpuReadable, ICpuWritable
     )
     {
         // The second pattern table is located directly to the right of the first
-        // int patternTableNumber = pixelCol >= PatternTablePixelWidth ? 1 : 0;
         var pattern = GetPattern(pixelRow, pixelCol, table);
 
         // Use the first background palette for pattern table visualization
