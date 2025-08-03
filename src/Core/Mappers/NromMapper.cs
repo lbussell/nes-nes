@@ -143,6 +143,15 @@ internal class NromMapper : IMapper
     /// <inheritdoc/>
     public void PpuWrite(ushort address, byte value)
     {
-        return;
+        // https://www.nesdev.org/wiki/PPU_memory_map
+        if (address < 0x2000)
+        {
+            // CHR ROM is read-only on most or all NROM cartridges.
+        }
+        else if (address < 0x3F00)
+        {
+            var nametableAddress = _nametableBanking.MapAddress(address);
+            _nametables[nametableAddress] = value;
+        }
     }
 }
