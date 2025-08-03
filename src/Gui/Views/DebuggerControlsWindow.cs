@@ -6,7 +6,7 @@ using ImGuiNET;
 namespace NesNes.Gui.Views;
 
 internal class DebuggerControlsWindow()
-    : ClosableWindow("Controls", ImGuiWindowFlags.AlwaysAutoResize, startOpen: true)
+    : ClosableWindow("Controls", ImGuiWindowFlags.AlwaysAutoResize)
 {
     public Action OnTogglePause { get; set; } = () => { };
     public Action OnStepScanline { get; set; } = () => { };

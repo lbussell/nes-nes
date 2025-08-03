@@ -7,13 +7,10 @@ using NesNes.Core;
 namespace NesNes.Gui.Views;
 
 internal class CpuStateWindow(NesConsole console)
-    : ClosableWindow("CPU State", WindowFlags, startOpen: true)
+    : ClosableWindow("CPU State", ImGuiWindowFlags.AlwaysAutoResize)
 {
     private const string ByteFormat = "X2";
     private const string UshortFormat = "X4";
-
-    private const ImGuiWindowFlags WindowFlags =
-        ImGuiWindowFlags.AlwaysAutoResize;
 
     private static readonly (string, Flags)[][] s_checkboxes =
     [

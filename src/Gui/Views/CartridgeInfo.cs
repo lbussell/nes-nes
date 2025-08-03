@@ -12,13 +12,10 @@ internal class CartridgeInfo : ClosableWindow
         ImGuiTableFlags.Borders
         | ImGuiTableFlags.RowBg;
 
-    private const ImGuiWindowFlags WindowFlags =
-        ImGuiWindowFlags.AlwaysAutoResize;
-
     private readonly (string, string)[] _tableRows;
 
     public CartridgeInfo(CartridgeData cartridge)
-        : base("Cartridge Info", WindowFlags, startOpen: false)
+        : base("Cartridge Info", ImGuiWindowFlags.AlwaysAutoResize)
     {
         var header = cartridge.Header;
         _tableRows =

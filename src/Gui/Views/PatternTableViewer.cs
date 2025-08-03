@@ -25,8 +25,7 @@ internal class PatternTableViewer : ClosableWindow
     private static readonly Vector2D<int> s_patternTablesSize =
         new(Ppu.PatternTablePixelWidth, 2 * Ppu.PatternTablePixelHeight);
 
-    public PatternTableViewer(GL openGl, NesConsole console)
-        : base("Pattern Tables", startOpen: true)
+    public PatternTableViewer(GL openGl, NesConsole console) : base("Pattern Tables")
     {
         _console = console;
         _texture = new Texture(openGl, s_patternTablesSize);
