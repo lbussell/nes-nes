@@ -31,6 +31,7 @@ internal class Emulator : IGame
             new CartridgeInfo(_console.Cartridge!),
             new CpuStateWindow(_console),
             patternTableViewer,
+            new OamDataWindow(_console),
             new ImGuiMetrics(),
         ];
     }

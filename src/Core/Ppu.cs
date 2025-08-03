@@ -154,6 +154,12 @@ public class Ppu : ICpuReadable, ICpuWritable
     }
 
     /// <summary>
+    /// Object attribute memory (OAM) is used to store data about which sprites
+    /// should be rendered on the screen.
+    /// </summary>
+    public ReadOnlySpan<byte> Oam => _oamData;
+
+    /// <summary>
     /// This method should be called by the CPU to interact with the PPU.
     /// </summary>
     /// <param name="address">
