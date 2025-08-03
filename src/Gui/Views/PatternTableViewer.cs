@@ -23,7 +23,7 @@ internal class PatternTableViewer : ClosableWindow
     /// Size of both pattern tables, stacked on top of each other vertically.
     /// </summary>
     private static readonly Vector2D<int> s_patternTablesSize =
-        new(Ppu.PatternTablePixelWidth, 2 * Ppu.PatternTablePixelHeight);
+        new(PpuConsts.PatternTablePixelWidth, 2 * PpuConsts.PatternTablePixelHeight);
 
     public PatternTableViewer(GL openGl, NesConsole console) : base("Pattern Tables")
     {
@@ -54,12 +54,12 @@ internal class PatternTableViewer : ClosableWindow
     {
         for (int pixelRow = 0; pixelRow < s_patternTablesSize.Y; pixelRow += 1)
         {
-            var table = pixelRow < Ppu.PatternTablePixelHeight ? 0 : 1;
+            var table = pixelRow < PpuConsts.PatternTablePixelHeight ? 0 : 1;
 
             for (int pixelCol = 0; pixelCol < s_patternTablesSize.X; pixelCol += 1)
             {
                 var color = _console.Ppu.GetPatternTablePixel(
-                    pixelRow % Ppu.PatternTablePixelHeight,
+                    pixelRow % PpuConsts.PatternTablePixelHeight,
                     pixelCol,
                     table,
                     _grayscale

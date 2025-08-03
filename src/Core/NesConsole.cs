@@ -92,7 +92,7 @@ public class NesConsole
         // The CPU spends a number of cycles during reset, so the PPU needs to
         // catch up. The PPU also spends some extra cycles somewhere during
         // reset, but who knows where that's from.
-        _ppu.Step(7 * Ppu.CyclesPerCpuCycle);
+        _ppu.Step(7 * PpuConsts.CyclesPerCpuCycle);
     }
 
     /// <summary>
@@ -113,14 +113,14 @@ public class NesConsole
     public void StepInstruction()
     {
         var elapsedCpuCycles = _cpu.Step();
-        var elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
+        var elapsedPpuCycles = elapsedCpuCycles * PpuConsts.CyclesPerCpuCycle;
 
         _ppuCyclesForThisScanline += elapsedPpuCycles;
-        if (_ppuCyclesForThisScanline >= Ppu.CyclesPerScanline)
+        if (_ppuCyclesForThisScanline >= PpuConsts.CyclesPerScanline)
         {
             // We have completed a scanline, so we should reset the cycle count
             // for the next scanline.
-            _ppuCyclesForThisScanline -= Ppu.CyclesPerScanline;
+            _ppuCyclesForThisScanline -= PpuConsts.CyclesPerScanline;
         }
     }
 
@@ -128,23 +128,23 @@ public class NesConsole
     {
         int cpuCyclesSinceLastScanline = 0;
 
-        while (_ppuCyclesForThisScanline < Ppu.CyclesPerScanline)
+        while (_ppuCyclesForThisScanline < PpuConsts.CyclesPerScanline)
         {
             int elapsedCpuCycles = _cpu.Step();
             cpuCyclesSinceLastScanline += elapsedCpuCycles;
 
-            int elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
+            int elapsedPpuCycles = elapsedCpuCycles * PpuConsts.CyclesPerCpuCycle;
             _ppuCyclesForThisScanline += elapsedPpuCycles;
         }
 
         // We completed one scanline, but we may have over-shot the target
         // number of cycles. If we did any extra work, we should make sure not
         // to count that towards the next scanline.
-        _ppuCyclesForThisScanline -= Ppu.CyclesPerScanline;
+        _ppuCyclesForThisScanline -= PpuConsts.CyclesPerScanline;
     }
 
     private void Tick(int cycles = 1)
     {
-        _ppu.Step(cycles * Ppu.CyclesPerCpuCycle);
+        _ppu.Step(cycles * PpuConsts.CyclesPerCpuCycle);
     }
 }

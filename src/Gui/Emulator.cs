@@ -59,7 +59,7 @@ internal class Emulator : IGame
 
     private void OnStepFrame()
     {
-        for (int i = 0; i < Ppu.Scanlines; i += 1)
+        for (int i = 0; i < PpuConsts.Scanlines; i += 1)
         {
             _console.StepScanline();
         }
