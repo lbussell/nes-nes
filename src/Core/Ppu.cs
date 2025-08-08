@@ -40,6 +40,9 @@ public class Ppu : ICpuReadable, ICpuWritable
     // registers onto the screen.
     private readonly byte[] _spriteXCoordinates = new byte[8];
 
+    // This array contains whether the sprite is flipped horizontally or not.
+    private readonly bool[] _spriteFlippedHorizontally = new bool[8];
+
     // This array contains the palette number for each sprite to be drawn on
     // the current scanline.
     private readonly byte[] _spritePalette = new byte[8];
@@ -346,18 +349,14 @@ public class Ppu : ICpuReadable, ICpuWritable
                     {
                         // Get the sprite pixel - since these are shift registers we get only the
                         // high bit.
-                        byte spritePatternLow = (byte)((_spritePatternLow[i] & 0x80) > 0 ? 1 : 0);
-                        byte spritePatternHigh = (byte)((_spritePatternHigh[i] & 0x80) > 0 ? 1 : 0);
+                        byte compareTo = _spriteFlippedHorizontally[i] ? (byte)0x01 : (byte)0x80;
+                        byte spritePatternLow = (byte)((_spritePatternLow[i] & compareTo) > 0 ? 1 : 0);
+                        byte spritePatternHigh = (byte)((_spritePatternHigh[i] & compareTo) > 0 ? 1 : 0);
                         spritePixel = (byte)((spritePatternHigh << 1) | spritePatternLow);
 
                         // Sprite palettes have a range of 4-7, so we need to add 4 to get the
                         // correct range.
                         spritePalette = (byte)(_spritePalette[i] + 4);
-
-                        // if (spritePalette != 0 && _scanline > 20)
-                        // {
-                        //     int x = 0;
-                        // }
 
                         // TODO: Handle sprite priority
                     }
@@ -446,12 +445,13 @@ public class Ppu : ICpuReadable, ICpuWritable
 
             if (isInRange)
             {
-                var _secondaryOamIndex = _spritesOnScanline * 4;
-                if (_secondaryOamIndex >= _secondaryOam.Length)
+                if (_spritesOnScanline >= 8)
                 {
                     // TODO: Overflow = true;
                     return;
                 }
+
+                var _secondaryOamIndex = _spritesOnScanline * 4;
 
                 // Copy the sprite's data to secondary OAM, which contains
                 // all sprites that will be drawn on the next scanline.
@@ -470,17 +470,25 @@ public class Ppu : ICpuReadable, ICpuWritable
             // https://www.nesdev.org/wiki/PPU_OAM
             // The secondary OAM contains the sprites that will be drawn on the
             // next scanline. Each sprite is represented by 4 bytes.
-            // Byte 0 is the Y coordinate of the sprite on the screen.
             var spriteY = _secondaryOam[spriteOffset];
-            var spriteX = _secondaryOam[spriteOffset + 3];
-            // Byte 1 is the tile index number (for 8x8 sprites).
             var tileIndexNumber = _secondaryOam[spriteOffset + 1];
+            var attribute = _secondaryOam[spriteOffset + 2];
+            var spriteX = _secondaryOam[spriteOffset + 3];
+
+            var isFlippedVertically = (attribute & 0b_1000_0000) > 0;
+            var isFlippedHorizontally = (attribute & 0b_0100_0000) > 0;
+
             // For 8x8 sprites, the pattern table address is determined by the
             // PPU control register (that's what we're reading here, behind the
             // getter)
             var patternTableTileAddress = SpritePatternTableAddress + (tileIndexNumber * PpuConsts.BytesPerTile);
             // Finally, determine which row of the sprite we need to get.
             var rowOffset = _scanline - spriteY;
+
+            if (isFlippedVertically)
+            {
+                rowOffset = 7 - rowOffset;
+            }
 
             var patternLowAddress = (ushort)(patternTableTileAddress + rowOffset);
             var patternHighAddress = (ushort)(patternLowAddress + 8);
@@ -491,6 +499,7 @@ public class Ppu : ICpuReadable, ICpuWritable
             _spritePatternLow[i] = patternLow;
             _spritePatternHigh[i] = patternHigh;
             _spriteXCoordinates[i] = spriteX;
+            _spriteFlippedHorizontally[i] = isFlippedHorizontally;
             _spritePalette[i] = (byte)(_secondaryOam[spriteOffset + 2] & 0x03);
         }
     }
@@ -504,11 +513,18 @@ public class Ppu : ICpuReadable, ICpuWritable
                 // We decrement the sprite's X coordinate here to keep track of
                 // when the scanline reaches the sprite on the screen.
                 _spriteXCoordinates[i] -= 1;
+                continue;
+            }
+
+            // When the sprite's X coordinate reaches 0, we can start updating
+            // its shift registers.
+            if (_spriteFlippedHorizontally[i])
+            {
+                _spritePatternHigh[i] >>= 1;
+                _spritePatternLow[i] >>= 1;
             }
             else
             {
-                // When the sprite's X coordinate reaches 0, we can start updating
-                // its shift registers.
                 _spritePatternHigh[i] <<= 1;
                 _spritePatternLow[i] <<= 1;
             }
