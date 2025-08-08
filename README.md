@@ -42,6 +42,7 @@ The final executable will be located in the directory `src/Gui/bin/Release/net10
 
 ## What's missing
 
+- [ ] Input of any kind
 - [ ] Background scrolling
 - [ ] Sprite 0 collision
 - [ ] Cartridge mappers other than NROM
