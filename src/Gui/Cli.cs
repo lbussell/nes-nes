@@ -3,7 +3,7 @@
 
 using ConsoleAppFramework;
 using NesNes.Core;
-using Silk.NET.Maths;
+using NesNes.Gui.Rendering;
 using static System.Console;
 
 namespace NesNes.Gui;
@@ -17,12 +17,13 @@ internal sealed class Cli
     [Command("")]
     public void Start(string rom)
     {
-        var romData = File.ReadAllBytes(rom);
-        var cartridge = CartridgeData.FromBytes(romData);
+        var romFileStream = File.OpenRead(rom);
+        var romFileName = Path.GetFileName(rom);
+        var cartridge = new CartridgeData(romFileStream, romFileName);
 
         WriteLine(
             $"""
-            Loaded ROM: {Path.GetFileName(rom)}
+            Loaded ROM: {romFileName}
             {cartridge}
             """
         );
@@ -31,13 +32,8 @@ internal sealed class Cli
         console.InsertCartridge(cartridge);
 
         var gameWindowFactory = new GameWindowFactory(console);
-        using var window = new WindowManager(
-            gameWindowFactory,
-            scale: 3,
-            "JANE"
-        );
+        var window = new WindowManager(gameWindowFactory, title: romFileName);
 
         window.Run();
-        window.Dispose();
     }
 }

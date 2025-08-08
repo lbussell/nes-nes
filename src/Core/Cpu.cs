@@ -8,7 +8,7 @@ public delegate void CpuCallback(ushort PC, Registers registers);
 public class Cpu
 {
     private readonly Instruction[] _instructions;
-    private readonly IMemory _memory;
+    private readonly IBus _bus;
     private Registers _registers;
     private readonly CpuCallback? _logCpuState;
     private readonly Action? _tickCallback;
@@ -18,13 +18,13 @@ public class Cpu
 
     public Cpu(
         Registers registers,
-        IMemory memory,
+        IBus bus,
         CpuCallback? logCpuState = null,
         Action? tickCallback = null
     )
     {
         _registers = registers;
-        _memory = memory;
+        _bus = bus;
         _logCpuState = logCpuState;
         _tickCallback = tickCallback;
 
@@ -1113,7 +1113,7 @@ public class Cpu
 
     private byte Read8(ushort address)
     {
-        var value = _memory.Read8(address);
+        var value = _bus.CpuRead(address);
         Tick();
         return value;
     }
@@ -1130,7 +1130,7 @@ public class Cpu
     private byte Write8(ushort address, byte value)
     {
         // Write a single byte to the specified address.
-        _memory.Write8(address, value);
+        _bus.CpuWrite(address, value);
         Tick();
         return value;
     }

@@ -12,7 +12,7 @@ public class NesConsole
 
     private readonly Cpu _cpu;
     private readonly Ppu _ppu;
-    private readonly Memory _memory;
+    private readonly Bus _bus;
     private readonly Controllers _controllers = new();
 
     private CartridgeData? _cartridge = null;
@@ -23,11 +23,11 @@ public class NesConsole
 
     public Ppu Ppu => _ppu;
 
-    public NesConsole(Cpu cpu, Ppu ppu, Memory memory)
+    public NesConsole(Cpu cpu, Ppu ppu, Bus bus)
     {
         _cpu = cpu;
         _ppu = ppu;
-        _memory = memory;
+        _bus = bus;
     }
 
     /// <summary>
@@ -40,16 +40,21 @@ public class NesConsole
     )
     {
         _ppu = new Ppu();
-        _memory = new Memory(_ppu, _controllers);
+
+        _bus = new Bus()
+        {
+            Ppu = _ppu,
+        };
+
         var registers = Registers.Initial;
 
         _cpu = new Cpu(
             registers: registers,
-            memory: _memory,
+            bus: _bus,
             logCpuState: logCpuState,
             tickCallback: () => Tick()
         );
-        _memory.TickCpu = _cpu.Tick;
+        _bus.TickCpu = _cpu.Tick;
 
         // The CPU checks some pins on the PPU to determine if an NMI is pending.
         _cpu.CheckNmiPins = () => _ppu.NmiInterrupt;
@@ -65,13 +70,18 @@ public class NesConsole
 
     public int CpuCycles => _cpu.Cycles;
 
+    public CartridgeData? Cartridge => _cartridge;
+
     public bool HasCartridge => _cartridge is not null;
 
-    public void InsertCartridge(CartridgeData cart)
+    public void InsertCartridge(CartridgeData cartridge)
     {
-        _cartridge = cart;
-        _memory.LoadRom(cart);
-        _ppu.LoadRom(cart);
+        _cartridge = cartridge;
+        var mapper = MapperFactory.Create(_cartridge);
+
+        _ppu.Mapper = mapper;
+        _bus.Mapper = mapper;
+
         Reset();
     }
 
@@ -82,7 +92,7 @@ public class NesConsole
         // The CPU spends a number of cycles during reset, so the PPU needs to
         // catch up. The PPU also spends some extra cycles somewhere during
         // reset, but who knows where that's from.
-        _ppu.Step(7 * Ppu.CyclesPerCpuCycle);
+        _ppu.Step(7 * PpuConsts.CyclesPerCpuCycle);
     }
 
     /// <summary>
@@ -103,14 +113,14 @@ public class NesConsole
     public void StepInstruction()
     {
         var elapsedCpuCycles = _cpu.Step();
-        var elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
+        var elapsedPpuCycles = elapsedCpuCycles * PpuConsts.CyclesPerCpuCycle;
 
         _ppuCyclesForThisScanline += elapsedPpuCycles;
-        if (_ppuCyclesForThisScanline >= Ppu.CyclesPerScanline)
+        if (_ppuCyclesForThisScanline >= PpuConsts.CyclesPerScanline)
         {
             // We have completed a scanline, so we should reset the cycle count
             // for the next scanline.
-            _ppuCyclesForThisScanline -= Ppu.CyclesPerScanline;
+            _ppuCyclesForThisScanline -= PpuConsts.CyclesPerScanline;
         }
     }
 
@@ -118,23 +128,23 @@ public class NesConsole
     {
         int cpuCyclesSinceLastScanline = 0;
 
-        while (_ppuCyclesForThisScanline < Ppu.CyclesPerScanline)
+        while (_ppuCyclesForThisScanline < PpuConsts.CyclesPerScanline)
         {
             int elapsedCpuCycles = _cpu.Step();
             cpuCyclesSinceLastScanline += elapsedCpuCycles;
 
-            int elapsedPpuCycles = elapsedCpuCycles * Ppu.CyclesPerCpuCycle;
+            int elapsedPpuCycles = elapsedCpuCycles * PpuConsts.CyclesPerCpuCycle;
             _ppuCyclesForThisScanline += elapsedPpuCycles;
         }
 
         // We completed one scanline, but we may have over-shot the target
         // number of cycles. If we did any extra work, we should make sure not
         // to count that towards the next scanline.
-        _ppuCyclesForThisScanline -= Ppu.CyclesPerScanline;
+        _ppuCyclesForThisScanline -= PpuConsts.CyclesPerScanline;
     }
 
     private void Tick(int cycles = 1)
     {
-        _ppu.Step(cycles * Ppu.CyclesPerCpuCycle);
+        _ppu.Step(cycles * PpuConsts.CyclesPerCpuCycle);
     }
 }
