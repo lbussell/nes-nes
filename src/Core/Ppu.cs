@@ -43,6 +43,10 @@ public class Ppu : ICpuReadable, ICpuWritable
     // This array contains whether the sprite is flipped horizontally or not.
     private readonly bool[] _spriteFlippedHorizontally = new bool[8];
 
+    // This array contains whether sprites should overwrite the background or
+    // not.
+    private readonly bool[] _spritePriority = new bool[8];
+
     // This array contains the palette number for each sprite to be drawn on
     // the current scanline.
     private readonly byte[] _spritePalette = new byte[8];
@@ -304,8 +308,6 @@ public class Ppu : ICpuReadable, ICpuWritable
         }
     }
 
-    private static readonly Color s_spriteDebugColor = new(0xFF, 0x00, 0x00);
-
     /// <summary>
     /// Advance the PPU by one cycle.
     /// </summary>
@@ -344,11 +346,16 @@ public class Ppu : ICpuReadable, ICpuWritable
                     var spriteX = _spriteXCoordinates[i];
 
                     // We have already started shifting the sprite's pattern data, so we know it's
-                    // visible.
-                    if (spriteX == 0)
+                    // visible. If we have already drawn a sprite pixel, we shouldn't overwrite it.
+                    // That's because sprites with a lower index have priority over those with
+                    // higher indices.
+                    if (spriteX == 0 && spritePixel == 0)
                     {
                         // Get the sprite pixel - since these are shift registers we get only the
-                        // high bit.
+                        // high bit or the low bit. This depends on which way the sprite is flipped
+                        // because I chose to shift the registers in the opposite direction when
+                        // the sprite is flipped horizontally (as opposed to reversing the bits
+                        // in the sprite data).
                         byte compareTo = _spriteFlippedHorizontally[i] ? (byte)0x01 : (byte)0x80;
                         byte spritePatternLow = (byte)((_spritePatternLow[i] & compareTo) > 0 ? 1 : 0);
                         byte spritePatternHigh = (byte)((_spritePatternHigh[i] & compareTo) > 0 ? 1 : 0);
@@ -357,8 +364,6 @@ public class Ppu : ICpuReadable, ICpuWritable
                         // Sprite palettes have a range of 4-7, so we need to add 4 to get the
                         // correct range.
                         spritePalette = (byte)(_spritePalette[i] + 4);
-
-                        // TODO: Handle sprite priority
                     }
                 }
 
@@ -382,9 +387,7 @@ public class Ppu : ICpuReadable, ICpuWritable
                 }
                 else
                 {
-                    // TODO: This was throwing an index out of bounds exception
                     color = GetPaletteColor(spritePalette, spritePixel);
-                    // color = s_spriteDebugColor;
                 }
 
                 RenderPixelCallback?.Invoke(_cycle, _scanline, color.R, color.G, color.B);
@@ -475,13 +478,22 @@ public class Ppu : ICpuReadable, ICpuWritable
             var attribute = _secondaryOam[spriteOffset + 2];
             var spriteX = _secondaryOam[spriteOffset + 3];
 
+            // We don't need to remember if the sprite is flipped vertically
+            // later, we can account for this now when we read the sprite's
+            // pattern data.
             var isFlippedVertically = (attribute & 0b_1000_0000) > 0;
-            var isFlippedHorizontally = (attribute & 0b_0100_0000) > 0;
+
+            // Set other sprite attributes
+            _spriteFlippedHorizontally[i] = (attribute & 0b_0100_0000) > 0;
+            _spritePriority[i] = (attribute & 0b_0010_0000) > 0;
+            _spritePalette[i] = (byte)(attribute & 0x03);
 
             // For 8x8 sprites, the pattern table address is determined by the
             // PPU control register (that's what we're reading here, behind the
             // getter)
-            var patternTableTileAddress = SpritePatternTableAddress + (tileIndexNumber * PpuConsts.BytesPerTile);
+            var patternTableTileAddress = SpritePatternTableAddress
+                + (tileIndexNumber * PpuConsts.BytesPerTile);
+
             // Finally, determine which row of the sprite we need to get.
             var rowOffset = _scanline - spriteY;
 
@@ -499,8 +511,6 @@ public class Ppu : ICpuReadable, ICpuWritable
             _spritePatternLow[i] = patternLow;
             _spritePatternHigh[i] = patternHigh;
             _spriteXCoordinates[i] = spriteX;
-            _spriteFlippedHorizontally[i] = isFlippedHorizontally;
-            _spritePalette[i] = (byte)(_secondaryOam[spriteOffset + 2] & 0x03);
         }
     }
 
