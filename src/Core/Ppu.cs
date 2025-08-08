@@ -26,16 +26,39 @@ public class Ppu : ICpuReadable, ICpuWritable
     private const int PpuData = 7;
 
     private readonly PpuAddrRegister _addressRegister = new();
+
     private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
     private readonly byte[] _paletteRam = new byte[0x20];
-    private readonly byte[] _oamData = new byte[0x100];
+    private readonly byte[] _oam = new byte[0x100];
+    private readonly byte[] _secondaryOam = new byte[0x20];
 
-    // The current PPU cycle (0-340). This also roughly corresponds to which
-    // pixel is being drawn on the current scanline.
+    // The following fields are data that hold information about sprites that
+    // will be drawn on the current scanline. This array holds the X
+    // coordinates of sprites to draw on the current scanline. For each sprite,
+    // this value will be decremented each cycle/pixel until it reaches 0, at
+    // which point we'll start shifting the sprite's pixels out of the shift
+    // registers onto the screen.
+    private readonly byte[] _spriteXCoordinates = new byte[8];
+
+    // This array contains the palette number for each sprite to be drawn on
+    // the current scanline.
+    private readonly byte[] _spritePalette = new byte[8];
+
+    // These are the shift registers for the sprites that will be drawn on the
+    // current scanline. Each sprite pixel's high and low bit are stored
+    // separately and get ORed together to get the final pixel's color index.
+    private readonly byte[] _spritePatternHigh = new byte[8];
+    private readonly byte[] _spritePatternLow = new byte[8];
+
+    // The current PPU cycle [0,340]. This corresponds to which pixel is being
+    // drawn on the current scanline.
     private ushort _cycle = 0;
 
     // The current scanline (0-261).
     private ushort _scanline = 0;
+
+    // How many sprites are on this scanline.
+    private byte _spritesOnScanline = 0;
 
     // Data buffer used for delaying reads of PPU memory
     private byte _dataBuffer;
@@ -89,11 +112,13 @@ public class Ppu : ICpuReadable, ICpuWritable
         set => SetRegisterBit(PpuCtrl, 1 << 2, value);
     }
 
+    private int SpritePatternTableAddress => GetRegisterBit(PpuCtrl, 1 << 3) ? 0x1000 : 0x0000;
+
     /// <summary>
     /// Object attribute memory (OAM) is used to store data about which sprites
     /// should be rendered on the screen.
     /// </summary>
-    public ReadOnlySpan<byte> Oam => _oamData;
+    public Span<byte> Oam => _oam;
 
     /// <summary>
     /// This method should be called by the CPU to interact with the PPU.
@@ -127,7 +152,7 @@ public class Ppu : ICpuReadable, ICpuWritable
 
     public void WriteOam(byte address, byte value)
     {
-        _oamData[address] = value;
+        _oam[address] = value;
     }
 
     /// <summary>
@@ -276,11 +301,97 @@ public class Ppu : ICpuReadable, ICpuWritable
         }
     }
 
+    private static readonly Color s_spriteDebugColor = new(0xFF, 0x00, 0x00);
+
     /// <summary>
     /// Advance the PPU by one cycle.
     /// </summary>
     private void Step()
     {
+        // Frame timing diagram: https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
+
+        var isVisibleScanline = _scanline < PpuConsts.DisplayHeight;
+        var isVisibleCycle = _cycle < PpuConsts.DisplayWidth;
+
+        if (isVisibleScanline)
+        {
+            // Do OAM/sprite operations
+            switch (_cycle)
+            {
+                case 1:
+                    ClearSecondaryOam();
+                    break;
+                case 256:
+                    EvaluateSprites();
+                    break;
+                case 340:
+                    FetchSprites();
+                    break;
+            }
+
+            if (isVisibleCycle)
+            {
+                UpdateShiftRegisters();
+
+                byte spritePixel = 0;
+                byte spritePalette = 0;
+
+                for (int i = 0; i < _spritesOnScanline; i += 1)
+                {
+                    var spriteX = _spriteXCoordinates[i];
+
+                    // We have already started shifting the sprite's pattern data, so we know it's
+                    // visible.
+                    if (spriteX == 0)
+                    {
+                        // Get the sprite pixel - since these are shift registers we get only the
+                        // high bit.
+                        byte spritePatternLow = (byte)((_spritePatternLow[i] & 0x80) > 0 ? 1 : 0);
+                        byte spritePatternHigh = (byte)((_spritePatternHigh[i] & 0x80) > 0 ? 1 : 0);
+                        spritePixel = (byte)((spritePatternHigh << 1) | spritePatternLow);
+
+                        // Sprite palettes have a range of 4-7, so we need to add 4 to get the
+                        // correct range.
+                        spritePalette = (byte)(_spritePalette[i] + 4);
+
+                        // if (spritePalette != 0 && _scanline > 20)
+                        // {
+                        //     int x = 0;
+                        // }
+
+                        // TODO: Handle sprite priority
+                    }
+                }
+
+                var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
+                var patternTableIndex = Mapper!.PpuRead((ushort)nameTableIndex);
+
+                // Decide which pattern table to use based on the PPU control register
+                var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
+                var pattern = GetPattern(patternTableIndex, backgroundPatternTable);
+
+                var paletteNumber = GetAttributeTableValue(_scanline, _cycle);
+                var colorIndex = GetBackgroundPixelColorIndex(pattern, _scanline % 8, _cycle % 8);
+                var bgColor = GetPaletteColor(paletteNumber, colorIndex);
+
+                Color color;
+
+                // TODO: Handle proper sprite priority and background muxing
+                if (spritePixel == 0)
+                {
+                    color = bgColor;
+                }
+                else
+                {
+                    // TODO: This was throwing an index out of bounds exception
+                    color = GetPaletteColor(spritePalette, spritePixel);
+                    // color = s_spriteDebugColor;
+                }
+
+                RenderPixelCallback?.Invoke(_cycle, _scanline, color.R, color.G, color.B);
+            }
+        }
+
         // The vblank flag is set at the start of vblank (scanline 241).
         // Reading PPUSTATUS will return the current state of this flag and
         // then clear it. If the vblank flag is not cleared by reading, it
@@ -289,22 +400,6 @@ public class Ppu : ICpuReadable, ICpuWritable
         if (_scanline == PpuConsts.VblankScanline && _cycle == 1)
         {
             VblankFlag = true;
-        }
-
-        if (_cycle < PpuConsts.DisplayWidth && _scanline < PpuConsts.DisplayHeight)
-        {
-            var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
-            var patternTableIndex = Mapper!.PpuRead((ushort)nameTableIndex);
-
-            // Decide which pattern table to use based on the PPU control register
-            var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
-            var pattern = GetPattern(patternTableIndex, backgroundPatternTable);
-
-            var paletteNumber = GetAttributeTableValue(_scanline, _cycle);
-            var colorIndex = GetBackgroundPixelColorIndex(pattern, _scanline % 8, _cycle % 8);
-            var color = GetPaletteColor(paletteNumber, colorIndex);
-
-            RenderPixelCallback?.Invoke(_cycle, _scanline, color.R, color.G, color.B);
         }
 
         _cycle += 1;
@@ -322,6 +417,100 @@ public class Ppu : ICpuReadable, ICpuWritable
             if (_scanline >= PpuConsts.Scanlines)
             {
                 _scanline = 0;
+            }
+        }
+    }
+
+    private void ClearSecondaryOam()
+    {
+        Array.Fill<byte>(_secondaryOam, 0xFF);
+    }
+
+    private void EvaluateSprites()
+    {
+        // This is all really just a big hack. We're going to do all sprite
+        // evaluation in one cycle, which is not how the PPU actually works.
+        // Sprite evaluation should actually take place over cycles 65-256, but
+        // this over-simplified approach will work just to get pictures on the
+        // screen. Some games won't work correctly with this approach.
+
+        _spritesOnScanline = 0;
+        for (int spriteIndex = 0; spriteIndex < 64; spriteIndex += 1)
+        {
+            // TODO - Support 8x16 sprites.
+            const int SpriteHeight = 8;
+
+            // Check if the sprite will be visible on the next scanline.
+            var spriteY = _oam[spriteIndex * 4];
+            var isInRange = spriteY <= _scanline && spriteY + SpriteHeight > _scanline;
+
+            if (isInRange)
+            {
+                var _secondaryOamIndex = _spritesOnScanline * 4;
+                if (_secondaryOamIndex >= _secondaryOam.Length)
+                {
+                    // TODO: Overflow = true;
+                    return;
+                }
+
+                // Copy the sprite's data to secondary OAM, which contains
+                // all sprites that will be drawn on the next scanline.
+                _oam.AsSpan(spriteIndex * 4, 4).CopyTo(_secondaryOam.AsSpan(_secondaryOamIndex, 4));
+                _spritesOnScanline += 1;
+            }
+        }
+    }
+
+    private void FetchSprites()
+    {
+        for (int i = 0; i < _spritesOnScanline; i += 1)
+        {
+            var spriteOffset = i * 4;
+
+            // https://www.nesdev.org/wiki/PPU_OAM
+            // The secondary OAM contains the sprites that will be drawn on the
+            // next scanline. Each sprite is represented by 4 bytes.
+            // Byte 0 is the Y coordinate of the sprite on the screen.
+            var spriteY = _secondaryOam[spriteOffset];
+            var spriteX = _secondaryOam[spriteOffset + 3];
+            // Byte 1 is the tile index number (for 8x8 sprites).
+            var tileIndexNumber = _secondaryOam[spriteOffset + 1];
+            // For 8x8 sprites, the pattern table address is determined by the
+            // PPU control register (that's what we're reading here, behind the
+            // getter)
+            var patternTableTileAddress = SpritePatternTableAddress + (tileIndexNumber * PpuConsts.BytesPerTile);
+            // Finally, determine which row of the sprite we need to get.
+            var rowOffset = _scanline - spriteY;
+
+            var patternLowAddress = (ushort)(patternTableTileAddress + rowOffset);
+            var patternHighAddress = (ushort)(patternLowAddress + 8);
+
+            var patternLow = Mapper!.PpuRead(patternLowAddress);
+            var patternHigh = Mapper.PpuRead(patternHighAddress);
+
+            _spritePatternLow[i] = patternLow;
+            _spritePatternHigh[i] = patternHigh;
+            _spriteXCoordinates[i] = spriteX;
+            _spritePalette[i] = (byte)(_secondaryOam[spriteOffset + 2] & 0x03);
+        }
+    }
+
+    private void UpdateShiftRegisters()
+    {
+        for (int i = 0; i < _spritesOnScanline; i += 1)
+        {
+            if (_spriteXCoordinates[i] > 0)
+            {
+                // We decrement the sprite's X coordinate here to keep track of
+                // when the scanline reaches the sprite on the screen.
+                _spriteXCoordinates[i] -= 1;
+            }
+            else
+            {
+                // When the sprite's X coordinate reaches 0, we can start updating
+                // its shift registers.
+                _spritePatternHigh[i] <<= 1;
+                _spritePatternLow[i] <<= 1;
             }
         }
     }
