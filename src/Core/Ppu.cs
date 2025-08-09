@@ -336,7 +336,12 @@ public class Ppu : ICpuReadable, ICpuWritable
 
             if (isVisibleCycle)
             {
-                UpdateShiftRegisters();
+                // If we update shift registers on the first cycle, then
+                // sprites will be shifted one pixel too far to the left.
+                if (_cycle != 0)
+                {
+                    UpdateShiftRegisters();
+                }
 
                 byte spritePixel = 0;
                 byte spritePalette = 0;
