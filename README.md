@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/010d575f-9bbc-4de4-b5e7-5ea6ed7afef3
 - Fully [Native AOT](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/) compiled
   - You don't need the .NET Runtime installed to use the emulator
   - The final executable and all its dependencies are <5 MB (for win-x64)
- 
+
 ## How to run it
 
 ### Prerequisites
@@ -54,6 +54,7 @@ The final executable will be located in the directory `src/Gui/bin/Release/net10
 
 - 6502 JSON Test Data is from https://github.com/SingleStepTests/65x02.
 - nestest.nes by Kevin Horton
+- "Smooth (FBX)" color palette by firebrandx https://www.firebrandx.com/nespalette.html
 
 ## Other stuff
 
