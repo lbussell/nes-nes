@@ -143,6 +143,14 @@ public class NesConsole
         _ppuCyclesForThisScanline -= PpuConsts.CyclesPerScanline;
     }
 
+    public void StepFrame()
+    {
+        for (int i = 0; i < PpuConsts.Scanlines; i += 1)
+        {
+            StepScanline();
+        }
+    }
+
     private void Tick(int cycles = 1)
     {
         _ppu.Step(cycles * PpuConsts.CyclesPerCpuCycle);
