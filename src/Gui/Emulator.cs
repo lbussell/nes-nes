@@ -52,18 +52,9 @@ internal class Emulator : IGame
         _isPaused = !_isPaused;
     }
 
-    private void OnStepScanline()
-    {
-        _console.StepScanline();
-    }
+    private void OnStepScanline() => _console.StepScanline();
 
-    private void OnStepFrame()
-    {
-        for (int i = 0; i < PpuConsts.Scanlines; i += 1)
-        {
-            _console.StepScanline();
-        }
-    }
+    private void OnStepFrame() => _console.StepFrame();
 
     private void OnReset()
     {
