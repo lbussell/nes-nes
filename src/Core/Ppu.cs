@@ -19,6 +19,7 @@ public class Ppu : ICpuReadable, ICpuWritable
 {
     // The following are indices into the _registers memory array
     private const int PpuCtrl = 0;
+    private const int PpuMask = 1;
     private const int PpuStatus = 2;
     private const int OamAddress = 3;
     private const int OamData = 4;
@@ -104,6 +105,9 @@ public class Ppu : ICpuReadable, ICpuWritable
         get => GetRegisterBit(PpuStatus, 1 << 7);
         set => SetRegisterBit(PpuStatus, 1 << 7, value);
     }
+
+    public bool BackgroundEnabled => GetRegisterBit(PpuMask, 1 << 3);
+    public bool SpritesEnabled => GetRegisterBit(PpuMask, 1 << 4);
 
     public bool NmiInterrupt => NmiEnabled && VblankFlag;
 
@@ -401,6 +405,11 @@ public class Ppu : ICpuReadable, ICpuWritable
 
     private (byte colorIndex, byte palette) GetBackgroundPixel()
     {
+        if (!BackgroundEnabled)
+        {
+            return (0, 0);
+        }
+
         // This is currently all a big hack to get static backgrounds rendered.
         // We need to do a lot more work to get background scrolling working.
         // In a real PPU, everything here would be rendered using shift
@@ -431,6 +440,11 @@ public class Ppu : ICpuReadable, ICpuWritable
         byte spritePixel = 0;
         byte spritePalette = 0;
         bool isBehindBackground = false;
+
+        if (!SpritesEnabled)
+        {
+            return (spritePixel, spritePalette, isBehindBackground);
+        }
 
         for (int i = 0; i < _spritesOnScanline; i += 1)
         {
