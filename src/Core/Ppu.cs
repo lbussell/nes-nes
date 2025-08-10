@@ -43,8 +43,7 @@ public class Ppu : ICpuReadable, ICpuWritable
     // This array contains whether the sprite is flipped horizontally or not.
     private readonly bool[] _spriteFlippedHorizontally = new bool[8];
 
-    // This array contains whether sprites should overwrite the background or
-    // not.
+    // Whether or not sprites should be drawn **behind** the background.
     private readonly bool[] _spritePriority = new bool[8];
 
     // This array contains the palette number for each sprite to be drawn on
@@ -346,12 +345,25 @@ public class Ppu : ICpuReadable, ICpuWritable
                     UpdateShiftRegisters();
                 }
 
-                var (spritePixel, spritePalette) = GetSpritePixel();
+                var (spritePixel, spritePalette, spriteBehindBackground) = GetSpritePixel();
                 var (backgroundPixel, backgroundPalette) = GetBackgroundPixel();
 
-                // TODO: Handle proper sprite priority
-                var colorIndex = spritePixel > 0 ? spritePixel : backgroundPixel;
-                var palette = spritePixel > 0 ? spritePalette : backgroundPalette;
+                var (colorIndex, palette) = (spritePixel, backgroundPixel, spriteBehindBackground) switch
+                {
+                    // No sprite pixel
+                    (0, _, _) => (backgroundPixel, backgroundPalette),
+
+                    // No background pixel
+                    (_, 0, _) => (spritePixel, spritePalette),
+
+                    // If both pixels are present, the sprite pixel is drawn
+                    // over the background only if its priority flag is set
+                    // to false.
+                    (> 0, > 0, false) => (spritePixel, spritePalette),
+
+                    // Otherwise the background pixel is drawn over sprite
+                    (> 0, > 0, true) => (backgroundPixel, backgroundPalette),
+                };
 
                 var color = GetPaletteColor(palette, colorIndex);
                 RenderPixelCallback?.Invoke(_cycle, _scanline, color.R, color.G, color.B);
@@ -414,38 +426,51 @@ public class Ppu : ICpuReadable, ICpuWritable
     /// sprite to be drawn, then it will return a pixel color of 0
     /// (transparent).
     /// </summary>
-    private (byte colorIndex, byte palette) GetSpritePixel()
+    private (byte colorIndex, byte palette, bool isBehindBackground) GetSpritePixel()
     {
         byte spritePixel = 0;
         byte spritePalette = 0;
+        bool isBehindBackground = false;
 
         for (int i = 0; i < _spritesOnScanline; i += 1)
         {
             var spriteX = _spriteXCoordinates[i];
 
-            // We have already started shifting the sprite's pattern data, so we know it's
-            // visible. If we have already drawn a sprite pixel, we shouldn't overwrite it.
-            // That's because sprites with a lower index have priority over those with
-            // higher indices.
-            if (spriteX == 0 && spritePixel == 0)
+            if (spriteX != 0)
             {
-                // Get the sprite pixel - since these are shift registers we get only the
-                // high bit or the low bit. This depends on which way the sprite is flipped
-                // because I chose to shift the registers in the opposite direction when
-                // the sprite is flipped horizontally (as opposed to reversing the bits
-                // in the sprite data).
-                byte compareTo = _spriteFlippedHorizontally[i] ? (byte)0x01 : (byte)0x80;
-                byte spritePatternLow = (byte)((_spritePatternLow[i] & compareTo) > 0 ? 1 : 0);
-                byte spritePatternHigh = (byte)((_spritePatternHigh[i] & compareTo) > 0 ? 1 : 0);
-                spritePixel = (byte)((spritePatternHigh << 1) | spritePatternLow);
+                continue;
+            }
 
-                // Sprite palettes have a range of 4-7, so we need to add 4 to get the
-                // correct range.
-                spritePalette = (byte)(_spritePalette[i] + 4);
+            // We have already started shifting the sprite's pattern data, so
+            // we know it's visible. If we have already drawn a sprite pixel,
+            // we shouldn't overwrite it. That's because sprites with a lower
+            // index have priority over those with higher indices.
+
+            // Get the sprite pixel - since these are shift registers we get
+            // only the high bit or the low bit. This depends on which way the
+            // sprite is flipped because I chose to shift the registers in the
+            // opposite direction when the sprite is flipped horizontally (as
+            // opposed to reversing the bits in the sprite data).
+            byte compareTo = _spriteFlippedHorizontally[i] ? (byte)0x01 : (byte)0x80;
+            byte spritePatternLow = (byte)((_spritePatternLow[i] & compareTo) > 0 ? 1 : 0);
+            byte spritePatternHigh = (byte)((_spritePatternHigh[i] & compareTo) > 0 ? 1 : 0);
+            spritePixel = (byte)((spritePatternHigh << 1) | spritePatternLow);
+
+            // Sprite palettes have a range of 4-7, so we need to add 4 to get
+            // the correct range.
+            spritePalette = (byte)(_spritePalette[i] + 4);
+
+            isBehindBackground = _spritePriority[i];
+
+            if (spritePixel > 0)
+            {
+                // The first sprite pixel we find is the one to draw, so there
+                // is no need to check the rest of the sprites.
+                break;
             }
         }
 
-        return (spritePixel, spritePalette);
+        return (spritePixel, spritePalette, isBehindBackground);
     }
 
     private void ClearSecondaryOam()
