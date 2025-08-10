@@ -219,6 +219,7 @@ public class Ppu : ICpuReadable, ICpuWritable
 
                 _addressRegister.Increment(IncrementMode);
                 break;
+
             default:
                 _openBus = _registers[address];
                 break;
@@ -238,11 +239,13 @@ public class Ppu : ICpuReadable, ICpuWritable
             case PpuAddress:
                 _addressRegister.Write(value);
                 break;
+
             case PpuData:
                 _openBus = value;
                 WriteMemory(_addressRegister.Value, _openBus);
                 _addressRegister.Increment(IncrementMode);
                 break;
+
             default:
                 _openBus = value;
                 _registers[address] = _openBus;
@@ -343,58 +346,14 @@ public class Ppu : ICpuReadable, ICpuWritable
                     UpdateShiftRegisters();
                 }
 
-                byte spritePixel = 0;
-                byte spritePalette = 0;
+                var (spritePixel, spritePalette) = GetSpritePixel();
+                var (backgroundPixel, backgroundPalette) = GetBackgroundPixel();
 
-                for (int i = 0; i < _spritesOnScanline; i += 1)
-                {
-                    var spriteX = _spriteXCoordinates[i];
+                // TODO: Handle proper sprite priority
+                var colorIndex = spritePixel > 0 ? spritePixel : backgroundPixel;
+                var palette = spritePixel > 0 ? spritePalette : backgroundPalette;
 
-                    // We have already started shifting the sprite's pattern data, so we know it's
-                    // visible. If we have already drawn a sprite pixel, we shouldn't overwrite it.
-                    // That's because sprites with a lower index have priority over those with
-                    // higher indices.
-                    if (spriteX == 0 && spritePixel == 0)
-                    {
-                        // Get the sprite pixel - since these are shift registers we get only the
-                        // high bit or the low bit. This depends on which way the sprite is flipped
-                        // because I chose to shift the registers in the opposite direction when
-                        // the sprite is flipped horizontally (as opposed to reversing the bits
-                        // in the sprite data).
-                        byte compareTo = _spriteFlippedHorizontally[i] ? (byte)0x01 : (byte)0x80;
-                        byte spritePatternLow = (byte)((_spritePatternLow[i] & compareTo) > 0 ? 1 : 0);
-                        byte spritePatternHigh = (byte)((_spritePatternHigh[i] & compareTo) > 0 ? 1 : 0);
-                        spritePixel = (byte)((spritePatternHigh << 1) | spritePatternLow);
-
-                        // Sprite palettes have a range of 4-7, so we need to add 4 to get the
-                        // correct range.
-                        spritePalette = (byte)(_spritePalette[i] + 4);
-                    }
-                }
-
-                var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
-                var patternTableIndex = Mapper!.PpuRead((ushort)nameTableIndex);
-
-                // Decide which pattern table to use based on the PPU control register
-                var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
-                var pattern = GetPattern(patternTableIndex, backgroundPatternTable);
-
-                var paletteNumber = GetAttributeTableValue(_scanline, _cycle);
-                var colorIndex = GetBackgroundPixelColorIndex(pattern, _scanline % 8, _cycle % 8);
-                var bgColor = GetPaletteColor(paletteNumber, colorIndex);
-
-                Color color;
-
-                // TODO: Handle proper sprite priority and background muxing
-                if (spritePixel == 0)
-                {
-                    color = bgColor;
-                }
-                else
-                {
-                    color = GetPaletteColor(spritePalette, spritePixel);
-                }
-
+                var color = GetPaletteColor(palette, colorIndex);
                 RenderPixelCallback?.Invoke(_cycle, _scanline, color.R, color.G, color.B);
             }
         }
@@ -426,6 +385,67 @@ public class Ppu : ICpuReadable, ICpuWritable
                 _scanline = 0;
             }
         }
+    }
+
+    private (byte colorIndex, byte palette) GetBackgroundPixel()
+    {
+        // This is currently all a big hack to get static backgrounds rendered.
+        // We need to do a lot more work to get background scrolling working.
+        // In a real PPU, everything here would be rendered using shift
+        // registers, similar to the logic for sprites.
+
+        var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
+        var patternTableIndex = Mapper!.PpuRead((ushort)nameTableIndex);
+
+        // Decide which pattern table to use based on the PPU control register
+        var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
+        var pattern = GetPattern(patternTableIndex, backgroundPatternTable);
+
+        var backgroundPalette = GetAttributeTableValue(_scanline, _cycle);
+        var colorIndex = GetBackgroundPixelColorIndex(pattern, _scanline % 8, _cycle % 8);
+
+        return (colorIndex, backgroundPalette);
+    }
+
+    /// <summary>
+    /// According to the current state of the PPU returns the pixel color and
+    /// palette for the sprite that should be rendered on the current cycle.
+    /// This doesn't take into account any background pixels - if there is no
+    /// sprite to be drawn, then it will return a pixel color of 0
+    /// (transparent).
+    /// </summary>
+    private (byte colorIndex, byte palette) GetSpritePixel()
+    {
+        byte spritePixel = 0;
+        byte spritePalette = 0;
+
+        for (int i = 0; i < _spritesOnScanline; i += 1)
+        {
+            var spriteX = _spriteXCoordinates[i];
+
+            // We have already started shifting the sprite's pattern data, so we know it's
+            // visible. If we have already drawn a sprite pixel, we shouldn't overwrite it.
+            // That's because sprites with a lower index have priority over those with
+            // higher indices.
+            if (spriteX == 0 && spritePixel == 0)
+            {
+                // Get the sprite pixel - since these are shift registers we get only the
+                // high bit or the low bit. This depends on which way the sprite is flipped
+                // because I chose to shift the registers in the opposite direction when
+                // the sprite is flipped horizontally (as opposed to reversing the bits
+                // in the sprite data).
+                byte compareTo = _spriteFlippedHorizontally[i] ? (byte)0x01 : (byte)0x80;
+                byte spritePatternLow = (byte)((_spritePatternLow[i] & compareTo) > 0 ? 1 : 0);
+                byte spritePatternHigh = (byte)((_spritePatternHigh[i] & compareTo) > 0 ? 1 : 0);
+                spritePixel = (byte)((spritePatternHigh << 1) | spritePatternLow);
+
+                // Sprite palettes have a range of 4-7, so we need to add 4 to get the
+                // correct range.
+                spritePalette = (byte)(_spritePalette[i] + 4);
+            }
+        }
+
+        return (spritePixel, spritePalette);
     }
 
     private void ClearSecondaryOam()
