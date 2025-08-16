@@ -20,6 +20,7 @@ internal class Emulator : IGame
         var debuggerControls = new DebuggerControlsWindow
         {
             OnTogglePause = OnTogglePause,
+            OnStepInstruction = OnStepInstruction,
             OnStepScanline = OnStepScanline,
             OnStepFrame = OnStepFrame,
             OnReset = OnReset
@@ -30,6 +31,7 @@ internal class Emulator : IGame
             debuggerControls,
             new CartridgeInfo(_console.Cartridge!),
             new CpuStateWindow(_console),
+            new PpuStateWindow(_console),
             patternTableViewer,
             new OamDataWindow(_console),
             new ImGuiMetrics(),
@@ -51,6 +53,8 @@ internal class Emulator : IGame
     {
         _isPaused = !_isPaused;
     }
+
+    private void OnStepInstruction() => _console.StepInstruction();
 
     private void OnStepScanline() => _console.StepScanline();
 

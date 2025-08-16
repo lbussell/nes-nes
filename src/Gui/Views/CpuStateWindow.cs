@@ -33,7 +33,7 @@ internal class CpuStateWindow(NesConsole console)
     private readonly NesConsole _console = console;
     private readonly Cpu _cpu = console.Cpu;
 
-    protected override void RenderContent(double deltaTimeSeconds)
+    protected unsafe override void RenderContent(double deltaTimeSeconds)
     {
         ImGui.SeparatorText("CPU");
 
@@ -65,6 +65,11 @@ internal class CpuStateWindow(NesConsole console)
 
         ImGui.SeparatorText("Flags (P)");
         RenderFlagsCheckboxes(registers.P);
+
+        ImGui.SeparatorText("Instruction");
+        ImGui.AlignTextToFramePadding();
+        var opcode = _console.Cpu.CurrentOpcode;
+        ImGui.InputScalar("Opcode", ImGuiDataType.U8, (nint)(&opcode), 0, 0, "0x%04X", ImGuiInputTextFlags.ReadOnly);
     }
 
     private static void RenderByte(string label, byte value)

@@ -63,6 +63,7 @@ public static class PpuConsts
 
     // https://www.nesdev.org/wiki/PPU_memory_map
     public const int PatternTablesEnd = 0x2000;
+    public const int NameTablesStart = 0x2000;
     public const int NameTablesEnd = 0x3000;
     public const int NameTableSize = 0x400;
     public const int PaletteRamStart = 0x3F00;

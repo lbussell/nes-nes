@@ -23,6 +23,8 @@ public class NesConsole
 
     public Ppu Ppu => _ppu;
 
+    public Bus Bus => _bus;
+
     public NesConsole(Cpu cpu, Ppu ppu, Bus bus)
     {
         _cpu = cpu;

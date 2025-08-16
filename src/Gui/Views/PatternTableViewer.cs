@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using ImGuiNET;
 using NesNes.Core;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
@@ -47,6 +48,7 @@ internal class PatternTableViewer : ClosableWindow
             UpdateTexture();
         }
 
+        ImGui.Checkbox("Grayscale", ref _grayscale);
         ImGuiHelper.RenderTextureWithIntegerScaling(_texture);
     }
 

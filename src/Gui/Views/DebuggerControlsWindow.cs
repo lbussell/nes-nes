@@ -9,15 +9,22 @@ internal class DebuggerControlsWindow()
     : ClosableWindow("Controls", ImGuiWindowFlags.AlwaysAutoResize)
 {
     public Action OnTogglePause { get; set; } = () => { };
+    public Action OnStepInstruction { get; set; } = () => { };
     public Action OnStepScanline { get; set; } = () => { };
     public Action OnStepFrame { get; set; } = () => { };
     public Action OnReset { get; set; } = () => { };
 
     protected override void RenderContent(double deltaTimeSeconds)
     {
-        if (ImGui.Button("Break/Continue"))
+        if (ImGui.Button("Break"))
         {
             OnTogglePause.Invoke();
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Instr."))
+        {
+            OnStepInstruction.Invoke();
         }
 
         ImGui.SameLine();

@@ -23,10 +23,9 @@ public class Ppu : ICpuReadable, ICpuWritable
     private const int PpuStatus = 2;
     private const int OamAddress = 3;
     private const int OamData = 4;
+    private const int PpuScroll = 5;
     private const int PpuAddress = 6;
     private const int PpuData = 7;
-
-    private readonly PpuAddrRegister _addressRegister = new();
 
     private readonly byte[] _registers = new byte[MemoryRegions.PpuRegistersSize];
     private readonly byte[] _paletteRam = new byte[0x20];
@@ -56,6 +55,64 @@ public class Ppu : ICpuReadable, ICpuWritable
     // separately and get ORed together to get the final pixel's color index.
     private readonly byte[] _spritePatternHigh = new byte[8];
     private readonly byte[] _spritePatternLow = new byte[8];
+
+    // Shift registers for the background. These shifters store both the
+    // current and next background tile data, that's why they're shorts instead
+    // of bytes. They are shifted left every cycle, and the high bit of each
+    // shifter determines what color the pixel will be. New patterns are loaded
+    // into the low 8 bytes of each shifter once every 8 cycles.
+    private ushort _backgroundPatternLow;
+    private ushort _backgroundPatternHigh;
+    private ushort _backgroundAttributeLow;
+    private ushort _backgroundAttributeHigh;
+
+    private byte _backgroundAttribute;
+    private byte _backgroundNextAttribute;
+
+    private void LoadBackgroundShiftRegister(ref ushort target, byte value)
+    {
+        target = (ushort)((target & 0xFF00) | value);
+    }
+
+    // These are the NES's internal registers.
+    // See: https://www.nesdev.org/wiki/PPU_registers#Internal_registers
+    //
+    // For explanation of how the V and T registers behave, see NES scrolling
+    // explained: https://forums.nesdev.org/viewtopic.php?t=664
+
+    /// <summary>
+    /// During rendering, used for scroll position. Outside of rendering, used
+    /// as the current pointer into VRAM/PPU memory.
+    /// </summary>
+    //
+    // Both V and T have the following internal format:
+    //
+    //     yyy NN YYYYY XXXXX
+    //     ||| || ||||| +++++-- coarse X scroll
+    //     ||| || +++++-------- coarse Y scroll
+    //     ||| ++-------------- nametable select
+    //     +++----------------- fine Y scroll
+    //
+    // private ushort _loopyV = 0;
+    private VRegister _v = new();
+
+    /// <summary>
+    /// During rendering, this specifies the starting coarse-X scroll position
+    /// for the next scanline and the starting Y scroll position for the
+    /// screen. Outside of rendering, this holds the scroll or VRAM address
+    /// before transferring it to V.
+    /// </summary>
+    // private ushort _loopyT = 0;
+    private VRegister _t = new();
+
+    private byte _fineXScroll = 0;
+
+    /// <summary>
+    /// Toggles on each write to PpuScroll and PpuAddress. This indicates
+    /// whether it was the first (false) or second (true) write to the the
+    /// given register.
+    /// </summary>
+    private bool _writeLatch = false;
 
     // The current PPU cycle [0,340]. This corresponds to which pixel is being
     // drawn on the current scanline.
@@ -106,8 +163,15 @@ public class Ppu : ICpuReadable, ICpuWritable
         set => SetRegisterBit(PpuStatus, 1 << 7, value);
     }
 
-    public bool BackgroundEnabled => GetRegisterBit(PpuMask, 1 << 3);
-    public bool SpritesEnabled => GetRegisterBit(PpuMask, 1 << 4);
+    /// <summary>
+    /// The address of the background pattern table in PPU memory.
+    /// </summary>
+    private ushort BackgroundPatternTableAddress => (ushort)((_registers[PpuCtrl] & 0x10) << 8);
+
+    public bool BackgroundEnabled => true;
+    public bool SpritesEnabled => true;
+    // public bool BackgroundEnabled => GetRegisterBit(PpuMask, 1 << 3);
+    // public bool SpritesEnabled => GetRegisterBit(PpuMask, 1 << 4);
 
     public bool NmiInterrupt => NmiEnabled && VblankFlag;
 
@@ -121,6 +185,14 @@ public class Ppu : ICpuReadable, ICpuWritable
         get => GetRegisterBit(PpuCtrl, 1 << 2);
         set => SetRegisterBit(PpuCtrl, 1 << 2, value);
     }
+
+    public ushort Cycle => _cycle;
+    public ushort Scanline => _scanline;
+    public ushort V => _v.Value;
+    public ushort T => _t.Value;
+    public byte FineXScroll => _fineXScroll;
+    public byte FineYScroll => _v.FineY;
+    public bool W => _writeLatch;
 
     private int SpritePatternTableAddress => GetRegisterBit(PpuCtrl, 1 << 3) ? 0x1000 : 0x0000;
 
@@ -205,22 +277,21 @@ public class Ppu : ICpuReadable, ICpuWritable
 
                 // Reading from the status register resets the address latch
                 // and clears the vertical blank flag.
-                _addressRegister.ResetLatch();
+                _writeLatch = false;
                 VblankFlag = false;
                 break;
 
             case PpuData:
                 _openBus = _dataBuffer;
-                _dataBuffer = ReadMemory(_addressRegister.Value);
+                _dataBuffer = ReadMemory(_v.Value);
 
                 // Palette RAM can be read immediately without going through the data buffer
-                if (_addressRegister.Value >= PpuConsts.PaletteRamStart
-                    && _addressRegister.Value < PpuConsts.PaletteRamEnd)
+                if (_v.Value >= PpuConsts.PaletteRamStart && _v.Value < PpuConsts.PaletteRamEnd)
                 {
                     _openBus = _dataBuffer;
                 }
 
-                _addressRegister.Increment(IncrementMode);
+                IncrementV();
                 break;
 
             default:
@@ -232,25 +303,71 @@ public class Ppu : ICpuReadable, ICpuWritable
     }
 
     /// <summary>
-    /// Internal method for directly writing to PPU registers with no
-    /// mirroring.
+    /// Internal method for directly writing to PPU registers with no mirroring
     /// </summary>
     private void WriteInternalRegister(ushort address, byte value)
     {
+        _openBus = value;
+
         switch (address)
         {
+            case PpuCtrl:
+                // From loopy's document (skinny.txt):
+                // $2000 write: t:0000 1100 0000 0000 = d:0000 0011
+                _registers[PpuCtrl] = value;
+                _t.NameTable = (byte)(value & 0x03);
+                break;
+
+            case PpuScroll:
+                if (!_writeLatch)
+                {
+                    // 2005 first write:
+                    // t:0000 0000 0001 1111 = d:1111 1000
+                    _t.CoarseX = (byte)(value >> 3);
+
+                    // x = d:00000111
+                    _fineXScroll = (byte)(value & 0x07);
+                }
+                else
+                {
+                    // 2005 second write:
+                    // t:0000 0011 1110 0000 = d:1111 1000
+                    _t.CoarseY = (byte)(value >> 3);
+
+                    // t:0111 0000 0000 0000 = d:0000 0111
+                    _t.FineY = (byte)(value & 0x07);
+                }
+
+                _writeLatch = !_writeLatch;
+                break;
+
             case PpuAddress:
-                _addressRegister.Write(value);
+                if (!_writeLatch)
+                {
+                    // 2006 first write:
+                    // t:0011 1111 0000 0000 = d:0011 1111
+                    // t:1100 0000 0000 0000 = 0
+                    _t.Value = (ushort)((_t.Value & 0x00FF) | ((value & 0x3F) << 8));
+                }
+                else
+                {
+                    // 2006 second write:
+                    // t:0000 0000 1111 1111 = d:1111 1111
+                    _t.Value = (ushort)((_t.Value & 0xFF00) | value);
+
+                    // v = t
+                    _v.Value = _t.Value;
+                }
+
+                _writeLatch = !_writeLatch;
                 break;
 
             case PpuData:
-                _openBus = value;
-                WriteMemory(_addressRegister.Value, _openBus);
-                _addressRegister.Increment(IncrementMode);
+                WriteMemory(_v.Value, _openBus);
+                IncrementV();
                 break;
 
             default:
-                _openBus = value;
                 _registers[address] = _openBus;
                 break;
         }
@@ -324,54 +441,144 @@ public class Ppu : ICpuReadable, ICpuWritable
         var isVisibleScanline = _scanline < PpuConsts.DisplayHeight;
         var isVisibleCycle = _cycle < PpuConsts.DisplayWidth;
 
-        if (isVisibleScanline)
+        // Do OAM/sprite operations
+        switch (_cycle)
         {
-            // Do OAM/sprite operations
-            switch (_cycle)
-            {
-                case 1:
-                    ClearSecondaryOam();
-                    break;
-                case 256:
-                    EvaluateSprites();
-                    break;
-                case 340:
-                    FetchSprites();
-                    break;
-            }
+            case 1:
+                ClearSecondaryOam();
+                break;
+            case 256:
+                EvaluateSprites();
+                IncrementYScroll();
+                break;
+            case 257:
+                // Copy all bits related to horizontal position from T to V
+                _v.CoarseX = _t.CoarseX;
+                _v.NameTable = (byte)((_v.NameTable & 0b10) | _t.NameTable & 0b01);
+                break;
+            case 340:
+                FetchSprites();
+                break;
+        }
 
-            if (isVisibleCycle)
+        if (_scanline == PpuConsts.Scanlines - 1 && _cycle >= 280 && _cycle <= 304)
+        {
+            // Copy Y components of T to V
+            _v.CoarseY = _t.CoarseY;
+            _v.FineY = _t.FineY;
+            _v.NameTable = (byte)((_v.NameTable & 0b01) | (_t.NameTable & 0b10));
+        }
+
+        bool fetchBackgroundData =
+            (
+                _scanline < PpuConsts.DisplayHeight
+                || _scanline == PpuConsts.Scanlines - 1
+            )
+            &&
+            (
+                // Visible cycles, except for 256 and 257. Also, we have the > 0 condition here
+                // because if we update shift registers on the first cycle, then sprites will be
+                // shifted one pixel too far to the left.
+                (_cycle > 0 && _cycle < 258)
+                // Pre-render cycles, but skip 337-340 which are unused NT reads
+                || (_cycle >= 321 && _cycle < 337)
+            );
+
+        if (fetchBackgroundData)
+        {
+            // In the future I think it'd be cool/more idiomatic to shift
+            // the registers in the method for getting the next pixel. For
+            // both sprite and background pixels.
+            UpdateShiftRegisters();
+
+            // We are going to fetch background all at once every 8 pixels.
+            // This is an oversimplification. In reality (reference the
+            // diagram linked above), one byte is fetched every two cycles.
+            // I'm just doing it this way now to simplify the
+            // implementation. Accuracy can come later.
+            if (_cycle % 8 == 0)
             {
-                // If we update shift registers on the first cycle, then
-                // sprites will be shifted one pixel too far to the left.
-                if (_cycle != 0)
+                if (_scanline == 0 && _cycle == 328)
                 {
-                    UpdateShiftRegisters();
+                    var _ = 0;
                 }
 
-                var (spritePixel, spritePalette, spriteBehindBackground) = GetSpritePixel();
-                var (backgroundPixel, backgroundPalette) = GetBackgroundPixel();
+                // The bottom 12 bits of V are the index into the nametable.
+                var backgroundTileIndex = Mapper!.PpuRead(
+                    (ushort)(PpuConsts.NameTablesStart | (_v.Value & 0x0FFF))
+                );
 
-                var (colorIndex, palette) = (spritePixel, backgroundPixel, spriteBehindBackground) switch
+                // Complete and utter shamless ripoff of
+                // https://www.nesdev.org/wiki/PPU_scrolling#Tile_and_attribute_fetching
+                var attributeAddress = (ushort)(
+                    0x23C0
+                    | (_v.Value & 0x0C00)
+                    | ((_v.Value >> 4) & 0x38)
+                    | ((_v.Value >> 2) & 0x07)
+                );
+
+                _backgroundAttribute = _backgroundNextAttribute;
+                _backgroundNextAttribute = Mapper.PpuRead(attributeAddress);
+
+                // Compute the correct attribute quadrant for the next tile
+                if ((_v.CoarseY & 0b10) > 0)
                 {
-                    // No sprite pixel
-                    (0, _, _) => (backgroundPixel, backgroundPalette),
+                    _backgroundNextAttribute >>= 4;
+                }
 
-                    // No background pixel
-                    (_, 0, _) => (spritePixel, spritePalette),
+                if ((_v.CoarseX & 0b10) > 0)
+                {
+                    _backgroundNextAttribute >>= 2;
+                }
 
-                    // If both pixels are present, the sprite pixel is drawn
-                    // over the background only if its priority flag is set
-                    // to false.
-                    (> 0, > 0, false) => (spritePixel, spritePalette),
+                ushort backgroundTileAddress = (ushort)(
+                    BackgroundPatternTableAddress
+                    + backgroundTileIndex * PpuConsts.BytesPerTile
+                    + _v.FineY
+                );
 
-                    // Otherwise the background pixel is drawn over sprite
-                    (> 0, > 0, true) => (backgroundPixel, backgroundPalette),
-                };
+                byte backgroundTileLow = Mapper.PpuRead(backgroundTileAddress);
+                byte backgroundTileHigh = Mapper.PpuRead((ushort)(backgroundTileAddress + 8));
 
-                var color = GetPaletteColor(palette, colorIndex);
-                RenderPixelCallback?.Invoke(_cycle, _scanline, color.R, color.G, color.B);
+                LoadBackgroundShiftRegister(ref _backgroundPatternLow, backgroundTileLow);
+                LoadBackgroundShiftRegister(ref _backgroundPatternHigh, backgroundTileHigh);
+                LoadBackgroundShiftRegister(ref _backgroundAttributeLow, (byte)((_backgroundNextAttribute & 0b01) > 0 ? 0xFF : 0x00));
+                LoadBackgroundShiftRegister(ref _backgroundAttributeHigh, (byte)((_backgroundNextAttribute & 0b10) > 0 ? 0xFF : 0x00));
+
+                // Scroll the background so that we pick up the next tile
+                IncrementXScroll();
             }
+        }
+
+        if (isVisibleScanline && isVisibleCycle)
+        {
+            // These are the cycles in which background data is fetched and
+            // loaded into the PPU's shift registers.
+            // These magic numbers are from this NTSC frame timing diagram:
+            // https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
+
+            var (spritePixel, spritePalette, spriteBehindBackground) = GetSpritePixel();
+            var (backgroundPixel, backgroundPalette) = GetBackgroundPixelFromShifters();
+
+            var (colorIndex, palette) = (spritePixel, backgroundPixel, spriteBehindBackground) switch
+            {
+                // No sprite pixel
+                (0, _, _) => (backgroundPixel, backgroundPalette),
+
+                // No background pixel
+                (_, 0, _) => (spritePixel, spritePalette),
+
+                // If both pixels are present, the sprite pixel is drawn
+                // over the background only if its priority flag is set
+                // to false.
+                ( > 0, > 0, false) => (spritePixel, spritePalette),
+
+                // Otherwise the background pixel is drawn over sprite
+                ( > 0, > 0, true) => (backgroundPixel, backgroundPalette),
+            };
+
+            var color = GetPaletteColor(palette, colorIndex);
+            RenderPixelCallback?.Invoke(_cycle, _scanline, color.R, color.G, color.B);
         }
 
         // The vblank flag is set at the start of vblank (scanline 241).
@@ -403,29 +610,66 @@ public class Ppu : ICpuReadable, ICpuWritable
         }
     }
 
-    private (byte colorIndex, byte palette) GetBackgroundPixel()
+    private void IncrementYScroll()
+    {
+        _v.FineY += 1;
+        if (_v.FineY != 0)
+        {
+            // If FineY didn't overflow, then all is well
+            return;
+        }
+
+        // FineY is 0, meaning we overflowed and need to increment CoarseY.
+        // Row 29 is the last row of tiles.
+        if (_v.CoarseY == 29)
+        {
+            _v.CoarseY = 0;
+            // Move to the nametable below
+            _v.NameTable ^= 0b10;
+        }
+        else if (_v.CoarseY == 31)
+        {
+            // In this weird corner case, CoarseY overflows but the nametable
+            // is not switched.
+            _v.CoarseY = 0;
+        }
+        else
+        {
+            _v.CoarseY += 1;
+        }
+    }
+
+    private void IncrementXScroll()
+    {
+        if (_v.CoarseX == 31)
+        {
+            // If CoarseX overflows, move to the next nametable
+            _v.CoarseX = 0;
+            _v.NameTable ^= 0b01;
+            return;
+        }
+
+        // If CoarseX won't overflow, just increment it
+        _v.CoarseX += 1;
+    }
+
+    private (byte colorIndex, byte palette) GetBackgroundPixelFromShifters()
     {
         if (!BackgroundEnabled)
         {
             return (0, 0);
         }
 
-        // This is currently all a big hack to get static backgrounds rendered.
-        // We need to do a lot more work to get background scrolling working.
-        // In a real PPU, everything here would be rendered using shift
-        // registers, similar to the logic for sprites.
+        byte low = (byte)((_backgroundPatternLow & 0x8000) >> 15);
+        byte high = (byte)((_backgroundPatternHigh & 0x8000) >> 15);
+        byte colorIndex = (byte)((high << 1) | low);
 
-        var nameTableIndex = PixelToNameTableIndex(_scanline, _cycle);
-        var patternTableIndex = Mapper!.PpuRead((ushort)nameTableIndex);
+        // Decode correct quadrant of the attribute byte
+        byte paletteLow = (byte)((_backgroundAttributeLow & 0x8000) >> 15);
+        byte paletteHigh = (byte)((_backgroundAttributeHigh & 0x8000) >> 15);
+        byte palette = (byte)((paletteHigh << 1) | paletteLow);
 
-        // Decide which pattern table to use based on the PPU control register
-        var backgroundPatternTable = (_registers[PpuCtrl] & 0x10) > 0 ? 1 : 0;
-        var pattern = GetPattern(patternTableIndex, backgroundPatternTable);
-
-        var backgroundPalette = GetAttributeTableValue(_scanline, _cycle);
-        var colorIndex = GetBackgroundPixelColorIndex(pattern, _scanline % 8, _cycle % 8);
-
-        return (colorIndex, backgroundPalette);
+        return (colorIndex, palette);
     }
 
     /// <summary>
@@ -603,6 +847,18 @@ public class Ppu : ICpuReadable, ICpuWritable
                 _spritePatternLow[i] <<= 1;
             }
         }
+
+        // TODO: Update background shift registers
+        _backgroundPatternHigh <<= 1;
+        _backgroundPatternLow <<= 1;
+        _backgroundAttributeHigh <<= 1;
+        _backgroundAttributeLow <<= 1;
+    }
+
+    private void IncrementV()
+    {
+        // _v.Value = (ushort)((_v.Value + (IncrementMode ? 32 : 1)) & 0x7FFF);
+        _v.Value = (ushort)(_v.Value + (IncrementMode ? 32 : 1));
     }
 
     /// <summary>
