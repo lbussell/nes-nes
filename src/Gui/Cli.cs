@@ -31,7 +31,7 @@ internal sealed class Cli
         var console = new NesConsole();
         console.InsertCartridge(cartridge);
 
-        var gameWindowFactory = new GameWindowFactory(console);
+        var gameWindowFactory = new EmulatorWindowFactory(console);
         var window = new WindowManager(gameWindowFactory, title: romFileName);
 
         window.Run();

@@ -68,7 +68,7 @@ public class NesTest
     private NesConsole CreateConsole(byte[] nesTestRom, ushort initialPc)
     {
         // Construct the console
-        var ppu = new Ppu();
+        var ppu = new PpuV2();
         var memory = new Bus()
         {
             Ppu = ppu

@@ -13,7 +13,7 @@ internal class PpuStateWindow(NesConsole console)
     private const string UshortFormat = "X4";
 
     private readonly NesConsole _console = console;
-    private readonly Ppu _ppu = console.Ppu;
+    private readonly IPpu _ppu = console.Ppu;
 
     protected override void RenderContent(double deltaTimeSeconds)
     {
@@ -29,19 +29,19 @@ internal class PpuStateWindow(NesConsole console)
         ImGui.SameLine();
         ImGui.Button(_ppu.Scanline.ToString());
 
-        ImGui.SeparatorText("Registers");
+        // ImGui.SeparatorText("Registers");
 
-        ImGui.AlignTextToFramePadding();
-        RenderUshort("V", _ppu.V);
+        // ImGui.AlignTextToFramePadding();
+        // RenderUshort("V", _ppu.V);
 
-        ImGui.SameLine();
-        RenderUshort("T", _ppu.T);
+        // ImGui.SameLine();
+        // RenderUshort("T", _ppu.T);
 
-        ImGui.SameLine();
-        RenderByte("X", _ppu.FineXScroll);
+        // ImGui.SameLine();
+        // RenderByte("X", _ppu.FineXScroll);
 
-        bool wIsChecked = _ppu.W;
-        ImGui.Checkbox("W", ref wIsChecked);
+        // bool wIsChecked = _ppu.W;
+        // ImGui.Checkbox("W", ref wIsChecked);
     }
 
     private static void RenderByte(string label, byte value)

@@ -61,7 +61,7 @@ public class MemoryTests
         ushort mirrorSize
     )
     {
-        var ppu = new Ppu();
+        var ppu = new PpuV2();
         IBus bus = new Bus()
         {
             Ppu = ppu

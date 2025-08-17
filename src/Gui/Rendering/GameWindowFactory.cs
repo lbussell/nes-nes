@@ -10,13 +10,13 @@ using NesNes.Gui.Views;
 
 namespace NesNes.Gui.Rendering;
 
-internal class GameWindowFactory(NesConsole console)
+internal class EmulatorWindowFactory(NesConsole console)
 {
     private readonly NesConsole _emulatorCore = console;
 
-    private readonly Vector2D<int> _internalSize = new(256, 240);
+    private readonly Vector2D<int> _internalSize = new(PpuV2.NumCycles, PpuV2.NumScanlines);
 
-    public IGameWindow CreateGameWindow(
+    public IGameWindow CreateEmulatorWindow(
         GL openGl,
         IInputContext inputContext,
         ImGuiController imGuiController
@@ -29,7 +29,7 @@ internal class GameWindowFactory(NesConsole console)
 
         var emulator = new Emulator(_emulatorCore, patternTableViewer);
 
-        var gameWindow = new ImGuiGameWindow(
+        var emulatorWindow = new ImGuiGameWindow(
             openGl,
             inputContext,
             imGuiController,
@@ -37,9 +37,9 @@ internal class GameWindowFactory(NesConsole console)
             game: emulator
         );
 
-        _emulatorCore.Ppu.RenderPixelCallback =
-            (x, y, r, g, b) => gameWindow.SetPixel(x, y, r, g, b);
+        _emulatorCore.Ppu.OnRenderPixel =
+            (x, y, r, g, b) => emulatorWindow.SetPixel(x, y, r, g, b);
 
-        return gameWindow;
+        return emulatorWindow;
     }
 }

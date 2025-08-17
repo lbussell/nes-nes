@@ -54,21 +54,21 @@ internal class PatternTableViewer : ClosableWindow
 
     private void UpdateTexture()
     {
-        for (int pixelRow = 0; pixelRow < s_patternTablesSize.Y; pixelRow += 1)
-        {
-            var table = pixelRow < PpuConsts.PatternTablePixelHeight ? 0 : 1;
+        // for (int pixelRow = 0; pixelRow < s_patternTablesSize.Y; pixelRow += 1)
+        // {
+        //     var table = pixelRow < PpuConsts.PatternTablePixelHeight ? 0 : 1;
 
-            for (int pixelCol = 0; pixelCol < s_patternTablesSize.X; pixelCol += 1)
-            {
-                var color = _console.Ppu.GetPatternTablePixel(
-                    pixelRow % PpuConsts.PatternTablePixelHeight,
-                    pixelCol,
-                    table,
-                    _grayscale
-                );
-                _texture.SetPixel(pixelCol, pixelRow, color.R, color.G, color.B, 0xFF);
-            }
-        }
+        //     for (int pixelCol = 0; pixelCol < s_patternTablesSize.X; pixelCol += 1)
+        //     {
+        //         var color = _console.Ppu.GetPatternTablePixel(
+        //             pixelRow % PpuConsts.PatternTablePixelHeight,
+        //             pixelCol,
+        //             table,
+        //             _grayscale
+        //         );
+        //         _texture.SetPixel(pixelCol, pixelRow, color.R, color.G, color.B, 0xFF);
+        //     }
+        // }
 
         _texture.UpdateTextureData();
     }

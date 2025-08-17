@@ -16,11 +16,11 @@ namespace NesNes.Gui.Rendering;
 class WindowManager
 {
     private readonly IWindow _window;
-    private readonly GameWindowFactory _gameWindowFactory;
+    private readonly EmulatorWindowFactory _gameWindowFactory;
 
     private readonly ServiceCollection _services = new();
 
-    public WindowManager(GameWindowFactory gameWindowFactory, string title)
+    public WindowManager(EmulatorWindowFactory gameWindowFactory, string title)
     {
         _gameWindowFactory = gameWindowFactory;
 
@@ -80,7 +80,7 @@ class WindowManager
         });
 
         var serviceProvider = _services.BuildServiceProvider();
-        IGameWindow window = _gameWindowFactory.CreateGameWindow(
+        IGameWindow window = _gameWindowFactory.CreateEmulatorWindow(
             serviceProvider.GetRequiredService<GL>(),
             serviceProvider.GetRequiredService<IInputContext>(),
             serviceProvider.GetRequiredService<ImGuiController>()

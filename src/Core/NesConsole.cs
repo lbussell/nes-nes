@@ -11,7 +11,7 @@ public class NesConsole
     public const int ApproxCpuCyclesPerScanline = 113;
 
     private readonly Cpu _cpu;
-    private readonly Ppu _ppu;
+    private readonly IPpu _ppu;
     private readonly Bus _bus;
     private readonly Controllers _controllers = new();
 
@@ -21,11 +21,11 @@ public class NesConsole
 
     public Cpu Cpu => _cpu;
 
-    public Ppu Ppu => _ppu;
+    public IPpu Ppu => _ppu;
 
     public Bus Bus => _bus;
 
-    public NesConsole(Cpu cpu, Ppu ppu, Bus bus)
+    public NesConsole(Cpu cpu, IPpu ppu, Bus bus)
     {
         _cpu = cpu;
         _ppu = ppu;
@@ -41,7 +41,7 @@ public class NesConsole
         ReadControllers? readControllers = null
     )
     {
-        _ppu = new Ppu();
+        _ppu = new PpuV2();
 
         _bus = new Bus()
         {
@@ -59,10 +59,10 @@ public class NesConsole
         _bus.TickCpu = _cpu.Tick;
 
         // The CPU checks some pins on the PPU to determine if an NMI is pending.
-        _cpu.CheckNmiPins = () => _ppu.NmiInterrupt;
+        _cpu.CheckNmiPins = () => _ppu.NonMaskableInterruptPin;
 
         // This function is called whenever the PPU wants to render a pixel.
-        _ppu.RenderPixelCallback = renderPixelCallback;
+        _ppu.OnRenderPixel = renderPixelCallback;
 
         if (readControllers is not null)
         {

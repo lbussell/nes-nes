@@ -5,7 +5,7 @@ namespace NesNes.Core;
 
 public class Bus : IBus
 {
-    public required Ppu Ppu { get; init; }
+    public required IPpu Ppu { get; init; }
     public CpuRam Ram { get; } = new CpuRam();
     public IMapper? Mapper { get; set; } = null;
 
