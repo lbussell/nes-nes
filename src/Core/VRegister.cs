@@ -3,7 +3,7 @@
 
 namespace NesNes.Core;
 
-internal class VRegister
+internal struct VRegister
 {
     // Reference: https://www.nesdev.org/wiki/PPU_scrolling#PPU_internal_registers
 
@@ -12,36 +12,30 @@ internal class VRegister
     private const ushort NameTableMask = 0b_0000_1100_0000_0000;
     private const ushort FineYMask = 0b_0111_0000_0000_0000;
 
-    private ushort _value;
-
-    public ushort Value
-    {
-        get => _value;
-        set => _value = value;
-    }
+    public ushort Value { get; set; }
 
     public byte CoarseX
     {
-        get => (byte)(_value & CoarseXMask);
-        set => _value = (ushort)((_value & ~CoarseXMask) | (value & CoarseXMask));
+        get => (byte)(Value & CoarseXMask);
+        set => Value = (ushort)((Value & ~CoarseXMask) | (value & CoarseXMask));
     }
 
     public byte CoarseY
     {
-        get => (byte)((_value & CoarseYMask) >> 5);
-        set => _value = (ushort)((_value & ~CoarseYMask) | ((value & 0x1F) << 5));
+        readonly get => (byte)((Value & CoarseYMask) >> 5);
+        set => Value = (ushort)((Value & ~CoarseYMask) | ((value & 0x1F) << 5));
     }
 
     public byte NameTable
     {
-        get => (byte)((_value & NameTableMask) >> 10);
-        set => _value = (ushort)((_value & ~NameTableMask) | ((value & 0x03) << 10));
+        readonly get => (byte)((Value & NameTableMask) >> 10);
+        set => Value = (ushort)((Value & ~NameTableMask) | ((value & 0x03) << 10));
     }
 
     public byte FineY
     {
-        get => (byte)((_value & FineYMask) >> 12);
-        set => _value = (ushort)((_value & ~FineYMask) | ((value & 0x07) << 12));
+        readonly get => (byte)((Value & FineYMask) >> 12);
+        set => Value = (ushort)((Value & ~FineYMask) | ((value & 0x07) << 12));
     }
 
     public override string ToString()

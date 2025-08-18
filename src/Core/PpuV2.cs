@@ -1,38 +1,37 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using System.Diagnostics;
+
 namespace NesNes.Core;
-
-public interface IPpu : ICpuReadable, ICpuWritable
-{
-    long Frame { get; }
-    int Scanline { get; }
-    int Cycle { get; }
-
-    bool NonMaskableInterruptPin { get; }
-
-    IMapper? Mapper { get; set; }
-
-    public RenderPixel? OnRenderPixel { get; set; }
-
-    void WriteOam(byte address, byte value);
-
-    void Step();
-
-    public void Step(int cycles)
-    {
-        for (int i = 0; i < cycles; i += 1)
-        {
-            Step();
-        }
-    }
-}
 
 public class PpuV2 : IPpu
 {
     public const int NumScanlines = 262;
     public const int NumCycles = 341;
 
+    // PPU registers
+    private const int PpuCtrl_2000 = 0;
+    private const int PpuMask_2001 = 1;
+    private const int PpuStatus_2002 = 2;
+    private const int OamAddr_2003 = 3;
+    private const int OamData_2004 = 4;
+    private const int PpuScroll_2005 = 5;
+    private const int PpuAddr_2006 = 6;
+    private const int PpuData_2007 = 7;
+
+    private readonly byte[] _registers = new byte[8];
+    private readonly byte[] _paletteRam = new byte[0x20];
+    private readonly byte[] _oam = new byte[0x100];
+    private readonly byte[] _secondaryOam = new byte[0x20];
+
+    // PPU internal registers
+    private VRegister _v;
+    private VRegister _t;
+    private byte _fineXScroll;
+    private bool _w;
+
+    // PPU state
     private long _frame;
     private int _scanline;
     private int _cycle;
@@ -40,23 +39,92 @@ public class PpuV2 : IPpu
     public long Frame => _frame;
     public int Scanline => _scanline;
     public int Cycle => _cycle;
+    public Span<byte> Oam => _oam;
 
     public IMapper? Mapper { get; set; } = null;
     public bool NonMaskableInterruptPin { get; }
 
     public RenderPixel? OnRenderPixel { get; set; }
 
+    // Bits 0 and 1: 0=$2000, 1=$2400, 2=$2800, 3=$2C00
+    private byte BaseNametableAddress => _t.NameTable;
+    private bool VRamIncrement => _registers[PpuCtrl_2000].GetBit(2);
+    private ushort SpritePatternTableAddress => (ushort)((_registers[PpuCtrl_2000] & 0x08) << 9);
+    private ushort BackgroundPatternTableAddress => (ushort)((_registers[PpuCtrl_2000] & 0x10) << 8);
+    private bool SpritesUse8x16 => _registers[PpuCtrl_2000].GetBit(5);
+    // PpuCtrl bit 6 is unused on commercial hardware (uses EXT)
+    private bool NmiEnabled => _registers[PpuCtrl_2000].GetBit(7);
+
+    private bool Grayscale => _registers[PpuMask_2001].GetBit(0);
+    private bool ShowBackgroundInLeft8Pixels => _registers[PpuMask_2001].GetBit(1);
+    private bool ShowSpritesInLeft8Pixels => _registers[PpuMask_2001].GetBit(2);
+    private bool BackgroundEnabled => _registers[PpuMask_2001].GetBit(3);
+    private bool SpritesEnabled => _registers[PpuMask_2001].GetBit(4);
+    private bool EmphasizeRed => _registers[PpuMask_2001].GetBit(5);
+    private bool EmphasizeGreen => _registers[PpuMask_2001].GetBit(6);
+    private bool EmphasizeBlue => _registers[PpuMask_2001].GetBit(7);
+
+    private bool SpriteOverflow => _registers[PpuStatus_2002].GetBit(5);
+    private bool SpriteZeroHit => _registers[PpuStatus_2002].GetBit(6);
+    private bool VblankFlag => _registers[PpuStatus_2002].GetBit(7);
+
     public byte CpuRead(ushort address)
     {
+        var register = MapCpuToRegisterAddress(address);
+        Debug.Assert(register >= 0 && register < _registers.Length);
+
+        switch (register)
+        {
+            case PpuCtrl_2000:
+                break;
+            case PpuMask_2001:
+                break;
+            case PpuStatus_2002:
+                break;
+            case OamAddr_2003:
+                break;
+            case OamData_2004:
+                break;
+            case PpuScroll_2005:
+                break;
+            case PpuAddr_2006:
+                break;
+            case PpuData_2007:
+                break;
+        }
+
         return 0;
     }
 
     public void CpuWrite(ushort address, byte value)
     {
+        var register = MapCpuToRegisterAddress(address);
+        Debug.Assert(register >= 0 && register < _registers.Length);
+
+        switch (register)
+        {
+            case PpuCtrl_2000:
+                break;
+            case PpuMask_2001:
+                break;
+            case PpuStatus_2002:
+                break;
+            case OamAddr_2003:
+                break;
+            case OamData_2004:
+                break;
+            case PpuScroll_2005:
+                break;
+            case PpuAddr_2006:
+                break;
+            case PpuData_2007:
+                break;
+        }
     }
 
     public void WriteOam(byte address, byte value)
     {
+        _oam[address] = value;
     }
 
     public void Step()
@@ -65,13 +133,6 @@ public class PpuV2 : IPpu
 
         // This method should closely follow the PPU timing diagram at
         // https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
-
-        if ((_frame & 0b1) == 0 && _cycle == 0 && _scanline == 0)
-        {
-            // On even frames, skip the first pixel of the first scanline.
-            _cycle += 1;
-            debugColor = DebugColors.Misc;
-        }
 
         if (_scanline == 261 || _scanline < 240)
         {
@@ -147,9 +208,21 @@ public class PpuV2 : IPpu
             _scanline += 1;
             if (_scanline >= NumScanlines)
             {
+                _frame += 1;
                 _scanline = 0;
             }
         }
+    }
+
+    private int MapCpuToRegisterAddress(int address)
+    {
+        // PPU registers are mapped to CPU address space 0x2000 - 0x3FFF and
+        // the 8 registers are mirrored every 8 bytes in that range.
+        Debug.Assert(address >= 0x2000 && address <= 0x3FFF);
+
+        address -= 0x2000;
+        address %= 8;
+        return _registers[address];
     }
 
     private void Output(Color color)
