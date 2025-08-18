@@ -20,6 +20,8 @@ public class PpuV2 : IPpu
     private const int PpuAddr_2006 = 6;
     private const int PpuData_2007 = 7;
 
+    // PPU internal memory
+    // * Nametables and pattern tables are handled by Mapper
     private readonly byte[] _registers = new byte[8];
     private readonly byte[] _paletteRam = new byte[0x20];
     private readonly byte[] _oam = new byte[0x100];
@@ -104,19 +106,50 @@ public class PpuV2 : IPpu
         switch (register)
         {
             case PpuCtrl_2000:
+                // Writes to the following registers are ignored if earlier than ~29658 CPU clocks
+                // after reset: PPUCTRL, PPUMASK, PPUSCROLL, PPUADDR.
+                if (_frame == 0 && _scanline < 258)
+                {
+                    break;
+                }
                 break;
+
             case PpuMask_2001:
+                // Writes to the following registers are ignored if earlier than ~29658 CPU clocks
+                // after reset: PPUCTRL, PPUMASK, PPUSCROLL, PPUADDR.
+                if (_frame == 0 && _scanline < 258)
+                {
+                    break;
+                }
                 break;
+
             case PpuStatus_2002:
                 break;
+
             case OamAddr_2003:
                 break;
+
             case OamData_2004:
                 break;
+
             case PpuScroll_2005:
+                // Writes to the following registers are ignored if earlier than ~29658 CPU clocks
+                // after reset: PPUCTRL, PPUMASK, PPUSCROLL, PPUADDR.
+                if (_frame == 0 && _scanline < 258)
+                {
+                    break;
+                }
                 break;
+
             case PpuAddr_2006:
+                // Writes to the following registers are ignored if earlier than ~29658 CPU clocks
+                // after reset: PPUCTRL, PPUMASK, PPUSCROLL, PPUADDR.
+                if (_frame == 0 && _scanline < 258)
+                {
+                    break;
+                }
                 break;
+
             case PpuData_2007:
                 break;
         }
@@ -211,6 +244,72 @@ public class PpuV2 : IPpu
                 _frame += 1;
                 _scanline = 0;
             }
+        }
+    }
+
+    // https://www.nesdev.org/wiki/PPU_memory_map
+    private byte ReadMemory(ushort address)
+    {
+        Debug.Assert(address < 0x4000);
+
+        switch (address)
+        {
+            // Nametables and attribute tables
+            case < 0x3000:
+                return Mapper?.PpuRead(address) ?? 0;
+
+            // Unused memory region
+            case < 0x3F00:
+                return 0;
+
+            // Palette RAM
+            case < 0x4000:
+                // $3F00-$3F1F is mirrored across $3F20-$3FFF
+                var paletteAddress = address - 0x3F00;
+                paletteAddress %= 0x20;
+                return _paletteRam[paletteAddress];
+
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(address),
+                    "Address out of range for PPU memory"
+                );
+        }
+    }
+
+    private void WriteMemory(ushort address, byte value)
+    {
+        Debug.Assert(address < 0x4000);
+
+        switch (address)
+        {
+            // Pattern tables
+            case < 0x2000:
+                // Pattern tables are read-only for most games
+                break;
+
+            // Nametables and attribute tables
+            case < 0x3000:
+                Mapper?.PpuWrite(address, value);
+                break;
+
+            // Unused memory region
+            case < 0x3F00:
+                break;
+
+            // Palette RAM
+            case < 0x4000:
+                // $3F00-$3F1F is mirrored across $3F20-$3FFF
+                var paletteAddress = address - 0x3F00;
+                paletteAddress %= 0x20;
+                _paletteRam[paletteAddress] = value;
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(address),
+                    "Address out of range for PPU memory"
+                );
         }
     }
 
