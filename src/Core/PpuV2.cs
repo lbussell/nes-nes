@@ -32,6 +32,8 @@ public class PpuV2 : IPpu
     private VRegister _t;
     private byte _fineXScroll;
     private bool _w;
+    private byte _openBus;
+    private byte _dataBuffer;
 
     // PPU state
     private long _frame;
@@ -66,9 +68,23 @@ public class PpuV2 : IPpu
     private bool EmphasizeGreen => _registers[PpuMask_2001].GetBit(6);
     private bool EmphasizeBlue => _registers[PpuMask_2001].GetBit(7);
 
-    private bool SpriteOverflow => _registers[PpuStatus_2002].GetBit(5);
-    private bool SpriteZeroHit => _registers[PpuStatus_2002].GetBit(6);
-    private bool VblankFlag => _registers[PpuStatus_2002].GetBit(7);
+    private bool SpriteOverflow
+    {
+        get => _registers[PpuStatus_2002].GetBit(5);
+        set => _registers[PpuStatus_2002] = _registers[PpuStatus_2002].SetBit(5, value);
+    }
+
+    private bool SpriteZeroHit
+    {
+        get => _registers[PpuStatus_2002].GetBit(6);
+        set => _registers[PpuStatus_2002] = _registers[PpuStatus_2002].SetBit(6, value);
+    }
+
+    private bool VblankFlag
+    {
+        get => _registers[PpuStatus_2002].GetBit(7);
+        set => _registers[PpuStatus_2002] = _registers[PpuStatus_2002].SetBit(7, value);
+    }
 
     public byte CpuRead(ushort address)
     {
@@ -77,25 +93,55 @@ public class PpuV2 : IPpu
 
         switch (register)
         {
-            case PpuCtrl_2000:
-                break;
-            case PpuMask_2001:
-                break;
+            // Don't currently have a use for customizing these
+            // case PpuCtrl_2000:
+            //     break;
+            // case PpuMask_2001:
+            //     break;
+
             case PpuStatus_2002:
+                // The upper 3 bits of PpuStatus are data, but the lower 5 bits
+                // are mapped to the open bus
+                _openBus = (byte)(_registers[PpuStatus_2002] & 0xE0);
+                _w = false;
+                VblankFlag = false;
                 break;
-            case OamAddr_2003:
-                break;
+
+            // Don't currently have a use for customizing these
+            // case OamAddr_2003:
+            //     break;
+
             case OamData_2004:
+                var oamAddress = _registers[OamAddr_2003];
+                _openBus = _oam[oamAddress];
                 break;
-            case PpuScroll_2005:
-                break;
-            case PpuAddr_2006:
-                break;
+
+            // Don't currently have a use for customizing these
+            // case PpuScroll_2005:
+            //     break;
+            // case PpuAddr_2006:
+            //     break;
+
             case PpuData_2007:
+                // Reads are delayed by one access
+                _openBus = _dataBuffer;
+                _dataBuffer = ReadMemory(_v);
+
+                // Palette RAM can be read immediately without going through the data buffer
+                if (_v >= 0x3F00 && _v < 0x4000)
+                {
+                    _openBus = _dataBuffer;
+                }
+
+                IncrementV();
+                break;
+
+            default:
+                _openBus = _registers[register];
                 break;
         }
 
-        return 0;
+        return _openBus;
     }
 
     public void CpuWrite(ushort address, byte value)
@@ -112,6 +158,9 @@ public class PpuV2 : IPpu
                 {
                     break;
                 }
+
+                _registers[PpuCtrl_2000] = value;
+                _t.NameTable = (byte)(value & 0x03);
                 break;
 
             case PpuMask_2001:
@@ -121,15 +170,21 @@ public class PpuV2 : IPpu
                 {
                     break;
                 }
+
+                _registers[register] = value;
                 break;
 
-            case PpuStatus_2002:
-                break;
-
-            case OamAddr_2003:
-                break;
+            // case PpuStatus_2002:
+            //     break;
+            // case OamAddr_2003:
+            //     break;
 
             case OamData_2004:
+                var oamAddress = _registers[OamAddr_2003];
+                _oam[oamAddress] = value;
+                // OAM address is incremented after writes
+                oamAddress += 1;
+                _registers[OamAddr_2003] = oamAddress;
                 break;
 
             case PpuScroll_2005:
@@ -139,6 +194,8 @@ public class PpuV2 : IPpu
                 {
                     break;
                 }
+
+                _registers[register] = value;
                 break;
 
             case PpuAddr_2006:
@@ -148,9 +205,17 @@ public class PpuV2 : IPpu
                 {
                     break;
                 }
+
+                _registers[register] = value;
                 break;
 
             case PpuData_2007:
+                WriteMemory(_v, value);
+                IncrementV();
+                break;
+
+            default:
+                _registers[register] = value;
                 break;
         }
     }
@@ -311,6 +376,15 @@ public class PpuV2 : IPpu
                     "Address out of range for PPU memory"
                 );
         }
+    }
+
+    private void IncrementV()
+    {
+        // Increment V based on the VRAM increment setting
+        ushort increment = (ushort)(VRamIncrement ? 32 : 1);
+        _v.Value += increment;
+        // V is really 15 bits, so we need to mask it here
+        _v.Value &= 0x7FFF;
     }
 
     private int MapCpuToRegisterAddress(int address)

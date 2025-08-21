@@ -46,4 +46,6 @@ internal struct VRegister
             + $", CoarseY:b{CoarseY:B5}"
             + $", CoarseX:b{CoarseX:B5})";
     }
+
+    public static implicit operator ushort(VRegister reg) => reg.Value;
 }
