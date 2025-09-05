@@ -82,6 +82,7 @@ class WindowManager
         var serviceProvider = _services.BuildServiceProvider();
         IGameWindow window = _gameWindowFactory.CreateEmulatorWindow(
             serviceProvider.GetRequiredService<GL>(),
+            _window,
             serviceProvider.GetRequiredService<IInputContext>(),
             serviceProvider.GetRequiredService<ImGuiController>()
         );

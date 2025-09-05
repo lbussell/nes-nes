@@ -7,6 +7,7 @@ using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using NesNes.Core;
 using NesNes.Gui.Views;
+using Silk.NET.Windowing;
 
 namespace NesNes.Gui.Rendering;
 
@@ -18,6 +19,7 @@ internal class EmulatorWindowFactory(NesConsole console)
 
     public IGameWindow CreateEmulatorWindow(
         GL openGl,
+        IWindow window,
         IInputContext inputContext,
         ImGuiController imGuiController
     )
@@ -31,6 +33,7 @@ internal class EmulatorWindowFactory(NesConsole console)
 
         var emulatorWindow = new ImGuiGameWindow(
             openGl,
+            window,
             inputContext,
             imGuiController,
             _internalSize,

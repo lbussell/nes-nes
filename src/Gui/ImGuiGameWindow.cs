@@ -8,6 +8,7 @@ using Silk.NET.OpenGL.Extensions.ImGui;
 using ImGuiNET;
 using NesNes.Gui.Rendering;
 using Texture = NesNes.Gui.Rendering.Texture;
+using Silk.NET.Windowing;
 
 namespace NesNes.Gui;
 
@@ -17,6 +18,7 @@ namespace NesNes.Gui;
 internal class ImGuiGameWindow : IGameWindow
 {
     private readonly GL _openGl;
+    private readonly IWindow _window;
     private readonly IInputContext _inputContext;
     private readonly ImGuiController _imGuiController;
     private readonly Texture _renderTexture;
@@ -27,6 +29,7 @@ internal class ImGuiGameWindow : IGameWindow
 
     public ImGuiGameWindow(
         GL openGl,
+        IWindow window,
         IInputContext inputContext,
         ImGuiController imGuiController,
         Vector2D<int> internalSize,
@@ -34,6 +37,7 @@ internal class ImGuiGameWindow : IGameWindow
     )
     {
         _openGl = openGl;
+        _window = window;
         _inputContext = inputContext;
         _imGuiController = imGuiController;
         _internalSize = internalSize;
@@ -53,6 +57,8 @@ internal class ImGuiGameWindow : IGameWindow
     {
         // Do any necessary updates
         _imGuiController.Update((float)deltaTimeSeconds);
+
+        _openGl.Viewport(_window.FramebufferSize);
 
         // This is where you'll do any rendering beneath the ImGui context
         _openGl.Clear(ClearBufferMask.ColorBufferBit);
