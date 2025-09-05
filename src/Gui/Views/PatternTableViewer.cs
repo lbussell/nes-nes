@@ -3,6 +3,7 @@
 
 using ImGuiNET;
 using NesNes.Core;
+using NesNes.Gui.Rendering;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Texture = NesNes.Gui.Rendering.Texture;

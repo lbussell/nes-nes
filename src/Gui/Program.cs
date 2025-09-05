@@ -6,4 +6,4 @@ using NesNes.Gui;
 
 var app = ConsoleApp.Create();
 app.Add<Cli>();
-app.Run(args);
+app.Run(["--rom", "/home/logan/src/nes-nes/roms/dk.nes"]);

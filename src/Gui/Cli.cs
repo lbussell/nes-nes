@@ -4,6 +4,7 @@
 using ConsoleAppFramework;
 using NesNes.Core;
 using NesNes.Gui.Rendering;
+using Silk.NET.Windowing;
 using static System.Console;
 
 namespace NesNes.Gui;
@@ -31,9 +32,10 @@ internal sealed class Cli
         var console = new NesConsole();
         console.InsertCartridge(cartridge);
 
-        var gameWindowFactory = new EmulatorWindowFactory(console);
-        var window = new WindowManager(gameWindowFactory, title: romFileName);
+        var windowOptions = WindowOptions.Default with { Title = romFileName };
+        Func<IWindow, IGameWindow> createWindow = window => new GameWindow(window, console);
 
-        window.Run();
+        var windowHost = new WindowHost(createWindow, windowOptions);
+        windowHost.Run();
     }
 }
