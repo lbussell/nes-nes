@@ -3,9 +3,8 @@
 
 using ImGuiNET;
 using System.Numerics;
-using Texture = NesNes.Gui.Rendering.Texture;
 
-namespace NesNes.Gui;
+namespace NesNes.Gui.Rendering;
 
 internal static class ImGuiHelper
 {

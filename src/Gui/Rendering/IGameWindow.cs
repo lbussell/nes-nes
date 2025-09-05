@@ -3,10 +3,12 @@
 
 using Silk.NET.Maths;
 
-namespace NesNes.Gui.Rendering;
+namespace NesNes.Gui;
 
-internal interface IGameWindow : IUpdatable, IRenderable
+internal interface IGameWindow
 {
-    void OnClose();
-    void OnFramebufferResize(Vector2D<int> newSize);
+    void Load();
+    void Update(double deltaTime);
+    void Render(double deltaTime);
+    void FramebufferResize(Vector2D<int> newSize);
 }
