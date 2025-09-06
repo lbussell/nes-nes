@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using System.Diagnostics;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
@@ -47,8 +48,10 @@ internal sealed class Texture : IImGuiRenderable, IDisposable
         );
     }
 
+    /// <inheritdoc/>
     public nint Handle => (nint)_handle;
 
+    /// <inheritdoc/>
     public Vector2D<int> Size => _size;
 
     public void SetPixel(int x, int y, byte r, byte g, byte b, byte a = 0xFF)
@@ -61,6 +64,13 @@ internal sealed class Texture : IImGuiRenderable, IDisposable
         _pixelData[index + 1] = g;
         _pixelData[index + 2] = b;
         _pixelData[index + 3] = a;
+    }
+
+    public void SetPixel(int x, int y, Span<byte> rgba)
+    {
+        Debug.Assert(rgba.Length == 4);
+        var destination = _pixelData.AsSpan(start: (y * _size.X + x) * 4, length: 4);
+        rgba.CopyTo(destination);
     }
 
     public void UpdateTextureData()
