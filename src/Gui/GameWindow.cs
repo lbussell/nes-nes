@@ -48,7 +48,8 @@ internal sealed class GameWindow : IGameWindow
                 OnTogglePause = OnTogglePause,
             },
             new PpuStateWindow(_console),
-            new PatternTableViewer(_gl, patternTableTexture),
+            new PatternTableViewer(patternTableTexture),
+            new NameTableViewer(_console, patternTableTexture),
             new OamDataWindow(_console),
             new ImGuiMetrics(),
         ];

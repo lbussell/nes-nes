@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using ImGuiNET;
-using NesNes.Core;
 using NesNes.Gui.Rendering;
-using Silk.NET.OpenGL;
 
 namespace NesNes.Gui.Views;
 
@@ -12,7 +10,7 @@ internal sealed class PatternTableViewer : ClosableWindow
 {
     private readonly PatternTableTexture _texture;
 
-    public PatternTableViewer(GL openGl, PatternTableTexture patternTableTexture)
+    public PatternTableViewer(PatternTableTexture patternTableTexture)
         : base("Pattern Tables", startOpen: true)
     {
         _texture = patternTableTexture;
