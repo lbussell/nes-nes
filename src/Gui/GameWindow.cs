@@ -33,7 +33,7 @@ internal sealed class GameWindow : IGameWindow
 
         _console.Ppu.OnRenderPixel = (x, y, r, g, b) => _renderTexture.SetPixel(x, y, r, g, b);
 
-        var patternTableViewer = new PatternTableViewer(_gl, _console);
+        var patternTableTexture = new PatternTableTexture(_gl, _console);
 
         _imGuiWindows =
         [
@@ -41,7 +41,7 @@ internal sealed class GameWindow : IGameWindow
             new CartridgeInfo(_console.Cartridge!),
             new CpuStateWindow(_console),
             new PpuStateWindow(_console),
-            patternTableViewer,
+            new PatternTableViewer(_gl, patternTableTexture),
             new OamDataWindow(_console),
             new ImGuiMetrics(),
         ];

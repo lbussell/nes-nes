@@ -9,7 +9,7 @@ namespace NesNes.Gui.Rendering;
 internal static class ImGuiHelper
 {
     public static void RenderTextureWithIntegerScaling(
-        Texture texture,
+        IImGuiRenderable texture,
         out Vector2 textureTopLeft,
         out int scale
     )

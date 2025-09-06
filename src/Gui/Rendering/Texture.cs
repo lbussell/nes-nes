@@ -6,7 +6,7 @@ using Silk.NET.OpenGL;
 
 namespace NesNes.Gui.Rendering;
 
-public class Texture : IDisposable
+internal sealed class Texture : IImGuiRenderable, IDisposable
 {
     private readonly GL _openGl;
 
