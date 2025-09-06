@@ -46,7 +46,7 @@ public class PpuV2 : IPpu
     public Span<byte> Oam => _oam;
 
     public IMapper? Mapper { get; set; } = null;
-    public bool NonMaskableInterruptPin { get; }
+    public bool NonMaskableInterruptPin => NmiEnabled && VblankFlag;
 
     public RenderPixel? OnRenderPixel { get; set; }
 
@@ -206,7 +206,22 @@ public class PpuV2 : IPpu
                     break;
                 }
 
-                _registers[register] = value;
+                if (!_w)
+                {
+                    // First write
+                    _w = true;
+                    // t: ..CDEFGH ........ <- d: ..CDEFGH
+                    _t.Value = (ushort)((_t.Value & 0x00FF) | ((value & 0x3F) << 8));
+                }
+                else
+                {
+                    // Second write
+                    _w = false;
+                    // t: ....... ABCDEFGH <- d: ABCDEFGH
+                    _t.Value = (ushort)((_t.Value & 0xFF00) | value);
+                    _v = _t;
+                }
+
                 break;
 
             case PpuData_2007:
@@ -278,6 +293,7 @@ public class PpuV2 : IPpu
         if (_scanline == 241 && _cycle == 1)
         {
             // Set VBlank flag
+            VblankFlag = true;
             debugColor = DebugColors.Flag;
         }
 
@@ -285,7 +301,10 @@ public class PpuV2 : IPpu
         {
             if (_cycle == 1)
             {
-                // Clear VBlank flag and sprite 0 overflow
+                // Clear VBlank flag, sprite 0 hit, sprite overflow
+                VblankFlag = false;
+                SpriteOverflow = false;
+                SpriteZeroHit = false;
                 debugColor = DebugColors.Flag;
             }
 
@@ -395,7 +414,9 @@ public class PpuV2 : IPpu
 
         address -= 0x2000;
         address %= 8;
-        return _registers[address];
+
+        Debug.Assert(address >= 0 && address < 8);
+        return address;
     }
 
     private void Output(Color color)

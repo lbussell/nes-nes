@@ -12,11 +12,11 @@ internal struct VRegister
     private const ushort NameTableMask = 0b_0000_1100_0000_0000;
     private const ushort FineYMask = 0b_0111_0000_0000_0000;
 
-    public ushort Value { get; set; }
+    public ushort Value { readonly get; set; }
 
     public byte CoarseX
     {
-        get => (byte)(Value & CoarseXMask);
+        readonly get => (byte)(Value & CoarseXMask);
         set => Value = (ushort)((Value & ~CoarseXMask) | (value & CoarseXMask));
     }
 
@@ -40,7 +40,7 @@ internal struct VRegister
 
     public override string ToString()
     {
-        return $"b{Value:B16}"
+        return $"${Value:X4} b{Value:B16}"
             + $" (FineY:b{FineY:B3}"
             + $", NameTable:b{NameTable:B2}"
             + $", CoarseY:b{CoarseY:B5}"
