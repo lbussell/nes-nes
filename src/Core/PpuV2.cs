@@ -44,6 +44,7 @@ public class PpuV2 : IPpu
     public int Scanline => _scanline;
     public int Cycle => _cycle;
     public Span<byte> Oam => _oam;
+    public Span<byte> PaletteRam => _paletteRam;
 
     public IMapper? Mapper { get; set; } = null;
     public bool NonMaskableInterruptPin => NmiEnabled && VblankFlag;

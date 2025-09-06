@@ -15,13 +15,15 @@ public interface IPpu : ICpuReadable, ICpuWritable
 
     IMapper? Mapper { get; set; }
 
-    public RenderPixel? OnRenderPixel { get; set; }
+    RenderPixel? OnRenderPixel { get; set; }
+
+    Span<byte> PaletteRam { get; }
 
     void WriteOam(byte address, byte value);
 
     void Step();
 
-    public void Step(int cycles)
+    void Step(int cycles)
     {
         for (int i = 0; i < cycles; i += 1)
         {

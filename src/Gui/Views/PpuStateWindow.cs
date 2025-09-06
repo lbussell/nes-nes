@@ -1,17 +1,15 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using System.Numerics;
 using ImGuiNET;
 using NesNes.Core;
 
 namespace NesNes.Gui.Views;
 
 internal class PpuStateWindow(NesConsole console)
-    : ClosableWindow("PPU State", ImGuiWindowFlags.AlwaysAutoResize)
+    : ClosableWindow("PPU State", ImGuiWindowFlags.AlwaysAutoResize, startOpen: true)
 {
-    private const string ByteFormat = "X2";
-    private const string UshortFormat = "X4";
-
     private readonly NesConsole _console = console;
     private readonly IPpu _ppu = console.Ppu;
 
@@ -24,37 +22,36 @@ internal class PpuStateWindow(NesConsole console)
         ImGui.SameLine();
         ImGui.Button(_ppu.Cycle.ToString());
 
-        ImGui.SameLine();
-        ImGui.Text("Scanline");
-        ImGui.SameLine();
-        ImGui.Button(_ppu.Scanline.ToString());
+        var paletteBytes = _console.Ppu.PaletteRam;
 
-        // ImGui.SeparatorText("Registers");
+        ImGui.Text("Palettes");
+        for (int p = 0; p < 8; p++)
+        {
+            int baseIndex = p * 4; // 0,4,8,12
+            ImGui.Text($"{p}");
+            ImGui.SameLine();
 
-        // ImGui.AlignTextToFramePadding();
-        // RenderUshort("V", _ppu.V);
+            for (int i = 0; i < 4; i++)
+            {
+                var nesIndex = paletteBytes[baseIndex + i];
+                RenderColor(nesIndex, baseIndex + i);
+                ImGui.SameLine();
+            }
 
-        // ImGui.SameLine();
-        // RenderUshort("T", _ppu.T);
-
-        // ImGui.SameLine();
-        // RenderByte("X", _ppu.FineXScroll);
-
-        // bool wIsChecked = _ppu.W;
-        // ImGui.Checkbox("W", ref wIsChecked);
+            ImGui.NewLine();
+        }
     }
 
-    private static void RenderByte(string label, byte value)
+    private static void RenderColor(byte nesIndex, int idx)
     {
-        ImGui.Text(label);
-        ImGui.SameLine();
-        ImGui.Button(value.ToString(ByteFormat));
-    }
+        var color = Palette.Colors[nesIndex];
+        var colorVector = new Vector4(color.R / 255f, color.G / 255f, color.B / 255f, 1f);
 
-    private static void RenderUshort(string label, ushort value)
-    {
-        ImGui.Text(label);
-        ImGui.SameLine();
-        ImGui.Button(value.ToString(UshortFormat));
+        ImGui.ColorButton(
+            $"##p{idx}",
+            colorVector,
+            ImGuiColorEditFlags.NoTooltip,
+            new Vector2(16, 16)
+        );
     }
 }
