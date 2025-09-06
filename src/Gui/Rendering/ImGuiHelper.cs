@@ -39,4 +39,33 @@ internal static class ImGuiHelper
 
         textureTopLeft = newCursorPosition;
     }
+
+    /// <summary>
+    /// Render a button.
+    /// </summary>
+    /// <param name="label">
+    /// Text to display on the button.
+    /// </param>
+    /// <param name="onClick">
+    /// If not assigned, the button will still be rendered, but disabled.
+    /// </param>
+    public static void RenderButton(string label, Action? onClick)
+    {
+        var buttonDisabled = onClick is null;
+
+        if (buttonDisabled)
+        {
+            ImGui.BeginDisabled();
+        }
+
+        if (ImGui.Button(label))
+        {
+            onClick?.Invoke();
+        }
+
+        if (buttonDisabled)
+        {
+            ImGui.EndDisabled();
+        }
+    }
 }

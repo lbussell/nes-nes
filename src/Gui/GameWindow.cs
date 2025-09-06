@@ -39,7 +39,14 @@ internal sealed class GameWindow : IGameWindow
         [
             // debuggerControls,
             new CartridgeInfo(_console.Cartridge!),
-            new CpuStateWindow(_console),
+            new CpuStateWindow(_console)
+            {
+                OnReset = OnReset,
+                OnStepFrame = OnStepFrame,
+                OnStepScanline = OnStepScanline,
+                OnStepInstruction = OnStepInstruction,
+                OnTogglePause = OnTogglePause,
+            },
             new PpuStateWindow(_console),
             new PatternTableViewer(_gl, patternTableTexture),
             new OamDataWindow(_console),

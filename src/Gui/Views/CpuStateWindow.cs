@@ -3,14 +3,21 @@
 
 using ImGuiNET;
 using NesNes.Core;
+using NesNes.Gui.Rendering;
 
 namespace NesNes.Gui.Views;
 
 internal class CpuStateWindow(NesConsole console)
-    : ClosableWindow("CPU State", ImGuiWindowFlags.AlwaysAutoResize)
+    : ClosableWindow("CPU State", ImGuiWindowFlags.AlwaysAutoResize, startOpen: true)
 {
     private const string ByteFormat = "X2";
     private const string UshortFormat = "X4";
+
+    public Action? OnTogglePause { get; set; } = null;
+    public Action? OnStepInstruction { get; set; } = null;
+    public Action? OnStepScanline { get; set; } = null;
+    public Action? OnStepFrame { get; set; } = null;
+    public Action? OnReset { get; set; } = null;
 
     private static readonly (string, Flags)[][] s_checkboxes =
     [
@@ -35,6 +42,8 @@ internal class CpuStateWindow(NesConsole console)
 
     protected unsafe override void RenderContent(double deltaTimeSeconds)
     {
+        RenderControls();
+
         ImGui.SeparatorText("CPU");
 
         ImGui.AlignTextToFramePadding();
@@ -84,6 +93,19 @@ internal class CpuStateWindow(NesConsole console)
         ImGui.Text(label);
         ImGui.SameLine();
         ImGui.Button(value.ToString(UshortFormat));
+    }
+
+    private void RenderControls()
+    {
+        ImGuiHelper.RenderButton("Break", OnTogglePause);
+        ImGui.SameLine();
+        ImGuiHelper.RenderButton("Instr.", OnStepInstruction);
+        ImGui.SameLine();
+        ImGuiHelper.RenderButton("Scanline", OnStepScanline);
+        ImGui.SameLine();
+        ImGuiHelper.RenderButton("Frame", OnStepFrame);
+        ImGui.SameLine();
+        ImGuiHelper.RenderButton("Reset", OnReset);
     }
 
     private static void RenderFlagsCheckboxes(Flags flags)
