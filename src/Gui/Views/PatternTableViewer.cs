@@ -36,18 +36,22 @@ internal sealed class PatternTableViewer : ClosableWindow
         {
             if (ImGui.BeginItemTooltip())
             {
-                var mousePosition = ImGui.GetMousePos();
-                var mousePositionOverTexture = mousePosition - windowPosition - textureTopLeft;
+                int patternIndex = PatternTableTexture.GetHoveredPattern(
+                    ImGui.GetMousePos(),
+                    windowPosition,
+                    textureTopLeft,
+                    scale
+                );
 
-                int tileSize = 8 * scale;
-                int tileX = (int)(mousePositionOverTexture.X / tileSize);
-                int tileY = (int)(mousePositionOverTexture.Y / tileSize);
-                int patternIndex = tileY * 16 + tileX;
+                int table = patternIndex / 256;
+                int address = patternIndex * 16;
+                int patternIndexWithinTable = patternIndex % 256;
 
-                ImGui.Text($"Tile ${patternIndex:X2} ({patternIndex})");
-                ImGui.Text($"CHR Addr ${patternIndex * 16:X4}");
+                ImGui.Text($"Table {table}");
+                ImGui.Text($"Tile ${patternIndexWithinTable:X2} ({patternIndexWithinTable})");
+                ImGui.Text($"CHR Addr ${address:X4}");
+                _texture.RenderPattern(patternIndex);
 
-                _texture.RenderPattern(tileX, tileY);
                 ImGui.EndTooltip();
             }
         }
