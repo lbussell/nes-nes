@@ -8,7 +8,11 @@ namespace NesNes.Gui.Rendering;
 
 internal static class ImGuiHelper
 {
-    public static void RenderTextureWithIntegerScaling(Texture texture)
+    public static void RenderTextureWithIntegerScaling(
+        Texture texture,
+        out Vector2 textureTopLeft,
+        out int scale
+    )
     {
         Vector2 availableSize = ImGui.GetContentRegionAvail();
 
@@ -17,7 +21,7 @@ internal static class ImGuiHelper
         int scaleY = Math.Max(1, (int)(availableSize.Y / texture.Size.Y));
 
         // Use the smaller scale factor to maintain aspect ratio
-        int scale = Math.Min(scaleX, scaleY);
+        scale = Math.Min(scaleX, scaleY);
         var scaledDisplaySize = (Vector2)(scale * texture.Size);
 
         // Center the image in the available space
@@ -32,5 +36,7 @@ internal static class ImGuiHelper
 
         ImGui.SetCursorPos(newCursorPosition);
         ImGui.Image(texture.Handle, scaledDisplaySize);
+
+        textureTopLeft = newCursorPosition;
     }
 }

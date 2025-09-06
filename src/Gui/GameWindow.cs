@@ -33,13 +33,15 @@ internal sealed class GameWindow : IGameWindow
 
         _console.Ppu.OnRenderPixel = (x, y, r, g, b) => _renderTexture.SetPixel(x, y, r, g, b);
 
+        var patternTableViewer = new PatternTableViewer(_gl, _console);
+
         _imGuiWindows =
         [
             // debuggerControls,
             new CartridgeInfo(_console.Cartridge!),
             new CpuStateWindow(_console),
             new PpuStateWindow(_console),
-            // patternTableViewer,
+            patternTableViewer,
             new OamDataWindow(_console),
             new ImGuiMetrics(),
         ];
@@ -88,11 +90,25 @@ internal sealed class GameWindow : IGameWindow
 
         // Render the game's renderTexture to the ImGui game window
         ImGui.Begin("Game", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
-        ImGuiHelper.RenderTextureWithIntegerScaling(_renderTexture);
+        ImGuiHelper.RenderTextureWithIntegerScaling(_renderTexture, out var _, out var _);
         ImGui.End();
 
-        // Render ImGui menubar and windows
-        RenderMainMenuBar(_imGuiWindows);
+        // Render menubar, which contains an item for each window.
+        if (ImGui.BeginMainMenuBar())
+        {
+            if (ImGui.BeginMenu("Window"))
+            {
+                foreach (var window in _imGuiWindows)
+                {
+                    RenderWindowViewMenuItem(window);
+                }
+
+                ImGui.EndMenu();
+            }
+            ImGui.EndMainMenuBar();
+        }
+
+        // Render windows (they only render themselves if open)
         foreach (var window in _imGuiWindows)
         {
             window.Render(deltaTimeSeconds);
@@ -109,23 +125,6 @@ internal sealed class GameWindow : IGameWindow
     private void OnStepScanline() => _console.StepScanline();
     private void OnStepFrame() => _console.StepFrame();
     private void OnReset() => _console.Reset();
-
-    private static void RenderMainMenuBar(IClosableWindow[] _windows)
-    {
-        if (ImGui.BeginMainMenuBar())
-        {
-            if (ImGui.BeginMenu("Window"))
-            {
-                foreach (var window in _windows)
-                {
-                    RenderWindowViewMenuItem(window);
-                }
-
-                ImGui.EndMenu();
-            }
-            ImGui.EndMainMenuBar();
-        }
-    }
 
     private static void RenderWindowViewMenuItem(IClosableWindow window) =>
         ImGui.MenuItem(window.Name, shortcut: null, ref window.Open);
