@@ -1,13 +1,10 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
-using System.Numerics;
 using ImGuiNET;
 using NesNes.Core;
 using NesNes.Gui.Rendering;
-using Silk.NET.Maths;
 using Silk.NET.OpenGL;
-using Texture = NesNes.Gui.Rendering.Texture;
 
 namespace NesNes.Gui.Views;
 
@@ -15,21 +12,15 @@ internal sealed class NameTableViewer : ClosableWindow
 {
     private readonly NesConsole _console;
     private readonly PatternTableTexture _patternTable;
+    private readonly NameTableTexture _nameTable;
 
-    public NameTableViewer(NesConsole console, PatternTableTexture patternTable)
+    public NameTableViewer(GL gl, NesConsole console, PatternTableTexture patternTable)
         : base("Name Tables", startOpen: true)
     {
         _console = console;
         _patternTable = patternTable;
+        _nameTable = new NameTableTexture(gl, console, patternTable);
     }
-
-    private const ImGuiTableFlags TableFlags =
-        ImGuiTableFlags.Borders
-        | ImGuiTableFlags.RowBg
-        | ImGuiTableFlags.ScrollY
-        | ImGuiTableFlags.ScrollX
-        | ImGuiTableFlags.NoHostExtendX
-        | ImGuiTableFlags.SizingFixedSame;
 
     protected override void RenderContent(double deltaTimeSeconds)
     {
@@ -39,24 +30,48 @@ internal sealed class NameTableViewer : ClosableWindow
             return;
         }
 
-        if (ImGui.BeginTable("NT", 32, TableFlags))
+        _nameTable.RenderToTexture();
+        var windowPos = ImGui.GetWindowPos();
+        ImGuiHelper.RenderTextureWithIntegerScaling(_nameTable, out var textureTopLeft, out var scale);
+
+        if (ImGui.IsItemHovered())
         {
-            // One name table is 32 tiles wide by 30 tiles tall. Each tile is one byte in the
-            // nametable. There are 4 name tables, each 0x400 (256) bytes in size, starting at
-            // $2000 in PPU memory.
-            var nameTableData = _console.Bus.Mapper.PpuRead(address: 0x2000, length: 0x400);
+            var mouse = ImGui.GetMousePos();
+            var relative = mouse - windowPos - textureTopLeft; // in pixels of scaled texture
+            float tileSize = 8 * scale;
 
-            for (int y = 0; y < 30; y++)
+            int tileX = (int)(relative.X / tileSize);
+            int tileY = (int)(relative.Y / tileSize);
+
+            int ntX = tileX / 32; // 0 or 1
+            int ntY = tileY / 30; // 0 or 1
+            int nametableNumber = ntY * 2 + ntX; // 0-3
+
+            int localX = tileX % 32;
+            int localY = tileY % 30;
+            int tileIndexInNameTable = localY * 32 + localX; // 0-959
+
+            ushort nameTableBase = (ushort)(0x2000 + nametableNumber * 0x400);
+            ushort nameTableAddress = (ushort)(nameTableBase + tileIndexInNameTable);
+
+            // Read pattern index (tile number) from PPU memory
+            byte patternIndex = _console.Bus.Mapper.PpuRead(nameTableAddress);
+
+            bool useSecondPatternTable = _console.Ppu.BackgroundPatternTableAddress > 0;
+            int patternTableNumber = useSecondPatternTable ? 1 : 0;
+            int globalPatternIndex = patternIndex + (patternTableNumber * 256);
+            int patternAddress = _console.Ppu.BackgroundPatternTableAddress + (patternIndex * 16);
+
+            if (ImGui.BeginItemTooltip())
             {
-                ImGui.TableNextRow();
-                for (int x = 0; x < 32; x++)
-                {
-                    ImGui.TableSetColumnIndex(x);
-                    ImGui.Text($"{nameTableData[y * 32 + x]:X2}");
-                }
+                ImGui.Text($"Nametable {nametableNumber} (${nameTableBase:X4})");
+                ImGui.Text($"Tile ({localX},{localY}) -> NT Addr ${nameTableAddress:X4}");
+                ImGui.Text($"Pattern Index ${patternIndex:X2} ({patternIndex})");
+                ImGui.Text($"Pattern Table {patternTableNumber}");
+                ImGui.Text($"Pattern Addr ${patternAddress:X4}");
+                _patternTable.RenderPattern(globalPatternIndex, scale: 8); // show enlarged pattern
+                ImGui.EndTooltip();
             }
-
-            ImGui.EndTable();
         }
     }
 }

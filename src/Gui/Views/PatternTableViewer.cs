@@ -50,7 +50,7 @@ internal sealed class PatternTableViewer : ClosableWindow
                 ImGui.Text($"Table {table}");
                 ImGui.Text($"Tile ${patternIndexWithinTable:X2} ({patternIndexWithinTable})");
                 ImGui.Text($"CHR Addr ${address:X4}");
-                _texture.RenderPattern(patternIndex);
+                _texture.RenderPattern(patternIndex, scale: 16);
 
                 ImGui.EndTooltip();
             }

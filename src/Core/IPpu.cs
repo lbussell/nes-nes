@@ -11,6 +11,8 @@ public interface IPpu : ICpuReadable, ICpuWritable
 
     bool NonMaskableInterruptPin { get; }
 
+    ushort BackgroundPatternTableAddress { get; }
+
     IMapper? Mapper { get; set; }
 
     public RenderPixel? OnRenderPixel { get; set; }

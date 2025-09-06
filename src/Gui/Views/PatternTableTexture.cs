@@ -41,15 +41,15 @@ internal sealed class PatternTableTexture : IImGuiRenderable
         return patternIndex;
     }
 
-    // patternIndex: 0-511 (0-255 = first table (top), 256-511 = second table (bottom))
-    public void RenderPattern(int patternIndex)
+    public void RenderPattern(int patternIndex, int scale = 1)
     {
         int table = patternIndex / 256; // 0 or 1
-        int indexWithinTable = patternIndex % 256; // 0-255
+        int indexWithinTable = patternIndex % 256;
         int tileX = indexWithinTable % 16;
-        int tileY = (indexWithinTable / 16) + (table * 16); // second table starts 16 tiles (128 px) down
+        int tileY = (indexWithinTable / 16) + (table * 16);
         var (uv0, uv1) = GetTileUvs(tileX, tileY);
-        ImGui.Image(_texture.Handle, new Vector2(128, 128), uv0, uv1);
+        scale *= 8;
+        ImGui.Image(_texture.Handle, new Vector2(scale, scale), uv0, uv1);
     }
 
     private static (Vector2 uv0, Vector2 uv1) GetTileUvs(int tileX, int tileY)

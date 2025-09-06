@@ -49,7 +49,7 @@ internal sealed class GameWindow : IGameWindow
             },
             new PpuStateWindow(_console),
             new PatternTableViewer(patternTableTexture),
-            new NameTableViewer(_console, patternTableTexture),
+            new NameTableViewer(_gl, _console, patternTableTexture),
             new OamDataWindow(_console),
             new ImGuiMetrics(),
         ];

@@ -54,7 +54,7 @@ public class PpuV2 : IPpu
     private byte BaseNametableAddress => _t.NameTable;
     private bool VRamIncrement => _registers[PpuCtrl_2000].GetBit(2);
     private ushort SpritePatternTableAddress => (ushort)((_registers[PpuCtrl_2000] & 0x08) << 9);
-    private ushort BackgroundPatternTableAddress => (ushort)((_registers[PpuCtrl_2000] & 0x10) << 8);
+    public ushort BackgroundPatternTableAddress => (ushort)((_registers[PpuCtrl_2000] & 0x10) << 8);
     private bool SpritesUse8x16 => _registers[PpuCtrl_2000].GetBit(5);
     // PpuCtrl bit 6 is unused on commercial hardware (uses EXT)
     private bool NmiEnabled => _registers[PpuCtrl_2000].GetBit(7);
