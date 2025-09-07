@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using System.Numerics;
 using ImGuiNET;
 using NesNes.Core;
 using NesNes.Gui.Rendering;
@@ -10,6 +11,9 @@ namespace NesNes.Gui.Views;
 
 internal sealed class NameTableViewer : ClosableWindow
 {
+    private static readonly Vector2 s_viewportSize = new(256, 240);
+    private static readonly Vector4 s_viewportColor = new(1f, 0f, 0f, 1f);
+
     private readonly NesConsole _console;
     private readonly PatternTableTexture _patternTable;
     private readonly NameTableTexture _nameTable;
@@ -31,13 +35,13 @@ internal sealed class NameTableViewer : ClosableWindow
         }
 
         _nameTable.RenderToTexture();
-        var windowPos = ImGui.GetWindowPos();
+        var windowPosition = ImGui.GetWindowPos();
         ImGuiHelper.RenderTextureWithIntegerScaling(_nameTable, out var textureTopLeft, out var scale);
 
         if (ImGui.IsItemHovered())
         {
             var mouse = ImGui.GetMousePos();
-            var relative = mouse - windowPos - textureTopLeft; // in pixels of scaled texture
+            var relative = mouse - windowPosition - textureTopLeft; // in pixels of scaled texture
             float tileSize = 8 * scale;
 
             int tileX = (int)(relative.X / tileSize);
@@ -73,5 +77,14 @@ internal sealed class NameTableViewer : ClosableWindow
                 ImGui.EndTooltip();
             }
         }
+
+        // Draw a rectangle around the viewport area.
+        // TODO: This should move with scrolling.
+        var viewportPosition = windowPosition + textureTopLeft + new Vector2(0, 0);
+        ImGui.GetForegroundDrawList().AddRect(
+            viewportPosition,
+            viewportPosition + s_viewportSize,
+            ImGui.GetColorU32(s_viewportColor)
+        );
     }
 }
