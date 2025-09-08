@@ -196,7 +196,24 @@ public class PpuV2 : IPpu
                     break;
                 }
 
-                _registers[register] = value;
+                if (!_w)
+                {
+                    // First write
+                    _w = true;
+                    // t: ........ ...ABCDE <- d: ABCDE...
+                    // x:               FGH <- d: .....FGH
+                    _t.CoarseX = (byte)((value & 0xF8) >> 3);
+                    _fineXScroll = (byte)(value & 0x07);
+                }
+                else
+                {
+                    // Second write
+                    _w = false;
+                    // t: .FGH..AB CDE..... <- d: ABCDEFGH
+                    _t.CoarseY = (byte)(value >> 3);
+                    _t.FineY = (byte)(value & 0x07);
+                }
+
                 break;
 
             case PpuAddr_2006:
@@ -256,36 +273,41 @@ public class PpuV2 : IPpu
                 {
                     case 0:
                         debugColor = DebugColors.VUpdate;
+                        IncrementCoarseXScroll();
                         break;
                     case <= 2:
                         debugColor = DebugColors.NameTableFetch;
+                        FetchNameTable();
                         break;
                     case <= 4:
                         debugColor = DebugColors.AttributeFetch;
+                        FetchAttribute();
                         break;
                     case <= 6:
                         debugColor = DebugColors.BackgroundLowFetch;
+                        FetchBackgroundLow();
                         break;
                     case 7:
                         debugColor = DebugColors.BackgroundHighFetch;
+                        FetchBackgroundHigh();
                         break;
                 }
 
                 if (_cycle == 256)
                 {
                     // Increment vertical scroll
+                    IncrementVerticalScroll();
                     debugColor = DebugColors.VUpdate;
                 }
-
-                if (_cycle % 8 == 0)
+                else if (_cycle == 257)
                 {
-                    // Increment coarse X scroll
-                    debugColor = DebugColors.VUpdate;
-                }
+                    if (BackgroundEnabled || SpritesEnabled)
+                    {
+                        // Transfer horizontal components of T to V
+                        _v.CoarseX = _t.CoarseX;
+                        _v.NameTableX = _t.NameTableX;
+                    }
 
-                if (_cycle == 257)
-                {
-                    // Transfer horizontal components of T to V
                     debugColor = DebugColors.VUpdate;
                 }
             }
@@ -312,6 +334,13 @@ public class PpuV2 : IPpu
             if (_cycle >= 280 && _cycle <= 304)
             {
                 // Copy vertical components of T to V
+                if (BackgroundEnabled || SpritesEnabled)
+                {
+                    _v.CoarseY = _t.CoarseY;
+                    _v.FineY = _t.FineY;
+                    _v.NameTableY = _t.NameTableY;
+                }
+
                 debugColor = DebugColors.VUpdate;
             }
         }
@@ -332,9 +361,86 @@ public class PpuV2 : IPpu
         }
     }
 
+    private void IncrementCoarseXScroll()
+    {
+        if (!BackgroundEnabled && !SpritesEnabled)
+        {
+            return;
+        }
+
+        if (_v.CoarseX == 31)
+        {
+            // Wrap around to next nametable
+            _v.CoarseX = 0;
+
+            var currentNameTableX = _v.NameTableX;
+            _v.NameTableX = !currentNameTableX;
+            return;
+        }
+
+        // Regular increment
+        _v.CoarseX += 1;
+    }
+
+    private void IncrementVerticalScroll()
+    {
+        if (!BackgroundEnabled && !SpritesEnabled)
+        {
+            return;
+        }
+
+        var fineY = _v.FineY;
+
+        // Regular increment of coarse Y
+        if (fineY < 7)
+        {
+            _v.FineY = (byte)(fineY + 1);
+            return;
+        }
+
+        _v.FineY = 0;
+
+        var coarseY = _v.CoarseY;
+        if (coarseY == 29)
+        {
+            // Reset coarse Y scroll and switch to next vertical nametable
+            _v.CoarseY = 0;
+            var currentNameTableY = _v.NameTableY;
+            _v.NameTableY = !currentNameTableY;
+            return;
+        }
+
+        if (coarseY == 31)
+        {
+            // Reset coarse Y scroll without switching nametable
+            _v.CoarseY = 0;
+            return;
+        }
+
+        // Regular increment
+        _v.CoarseY += 1;
+    }
+
+    private void FetchBackgroundHigh()
+    {
+    }
+
+    private void FetchBackgroundLow()
+    {
+    }
+
+    private void FetchNameTable()
+    {
+    }
+
+    private void FetchAttribute()
+    {
+    }
+
     // https://www.nesdev.org/wiki/PPU_memory_map
     private byte ReadMemory(ushort address)
     {
+        address &= 0x3FFF;
         Debug.Assert(address < 0x4000);
 
         switch (address)
@@ -364,6 +470,7 @@ public class PpuV2 : IPpu
 
     private void WriteMemory(ushort address, byte value)
     {
+        address &= 0x3FFF;
         Debug.Assert(address < 0x4000);
 
         switch (address)
@@ -403,8 +510,6 @@ public class PpuV2 : IPpu
         // Increment V based on the VRAM increment setting
         ushort increment = (ushort)(VRamIncrement ? 32 : 1);
         _v.Value += increment;
-        // V is really 15 bits, so we need to mask it here
-        _v.Value &= 0x7FFF;
     }
 
     private int MapCpuToRegisterAddress(int address)
