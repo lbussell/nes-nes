@@ -28,6 +28,16 @@ public class Bus : IBus
             // Controllers, APU, etc.
             return 0;
         }
+        else if (address < 0x6000)
+        {
+            // Unmapped?
+            return 0;
+        }
+        else if (address < 0x8000)
+        {
+            // Cartridge RAM
+            return 0;
+        }
         else if (Mapper is not null && address >= MemoryRegions.PrgRom)
         {
             return Mapper.CpuRead(address);
