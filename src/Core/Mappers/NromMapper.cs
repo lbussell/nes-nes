@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
-using NesNes.Core;
-
 namespace NesNes.Core.Mappers;
 
 internal class NromMapper : IMapper
@@ -28,16 +26,13 @@ internal class NromMapper : IMapper
 
         // NROM can have one or two PRG banks, each 16K in size. If it has only
         // one, then the second slot mirrors the first.
+        var isNrom256 = cartridge.Header.PrgRomSize == 0x8000; // NROM-256 = 32KB PRG, NROM-128 = 16KB PRG
+
+        // Always two 16KB CPU windows ($8000-$BFFF and $C000-$FFFF).
+        // 32KB: banks 0 and 1. 16KB: both windows mirror bank 0.
         _prgBanking = Banking.CreatePrg(cartridge.Header, numberOfSlots: 2);
         _prgBanking.SetSlot(slotNumber: 0, bankNumber: 0);
-        if (cartridge.Header.PrgPages == 1)
-        {
-            _prgBanking.SetSlot(slotNumber: 1, bankNumber: 0);
-        }
-        else
-        {
-            _prgBanking.SetSlot(slotNumber: 1, bankNumber: 1);
-        }
+        _prgBanking.SetSlot(slotNumber: 1, bankNumber: isNrom256 ? 1 : 0);
 
         _chrBanking = Banking.CreateChr(cartridge.Header, numberOfSlots: 1);
         _chrBanking.SetSlot(slotNumber: 0, bankNumber: 0);

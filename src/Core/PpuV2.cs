@@ -2,11 +2,66 @@
 // SPDX-License-Identifier: MIT
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace NesNes.Core;
 
 public class PpuV2 : IPpu
 {
+    private struct BackgroundRenderData
+    {
+        public byte NextTileId;
+        public byte Attribute;
+        public byte PatternLow;
+        public byte PatternHigh;
+    }
+
+    /// <summary>
+    /// Background shifters used for rendering background pixels. Pixels are
+    /// shifted out of the high bit first, and new data is loaded into the low
+    /// bits.
+    /// </summary>
+    private struct BackgroundShifters
+    {
+        public ushort PatternLow;
+        public ushort PatternHigh;
+        public ushort AttributeLow;
+        public ushort AttributeHigh;
+
+        public readonly byte GetPixel()
+        {
+            var bit0 = (PatternLow & 0x8000) > 0 ? 1 : 0;
+            var bit1 = (PatternHigh & 0x8000) > 0 ? 1 : 0;
+            return (byte)(bit0 | (bit1 << 1));
+        }
+
+        public readonly byte GetPalette()
+        {
+            var bit0 = (AttributeLow & 0x8000) > 0 ? 1 : 0;
+            var bit1 = (AttributeHigh & 0x8000) > 0 ? 1 : 0;
+            return (byte)(bit0 | (bit1 << 1));
+        }
+
+        public void Shift()
+        {
+            PatternLow <<= 1;
+            PatternHigh <<= 1;
+            AttributeLow <<= 1;
+            AttributeHigh <<= 1;
+        }
+
+        public void Load(BackgroundRenderData data)
+        {
+            PatternLow = (ushort)((PatternLow & 0xFF00) | data.PatternLow);
+            PatternHigh = (ushort)((PatternHigh & 0xFF00) | data.PatternHigh);
+
+            var attributeLow = (data.Attribute & 0b01) > 0 ? 0xFF : 0x00;
+            var attributeHigh = (data.Attribute & 0b10) > 0 ? 0xFF : 0x00;
+            AttributeLow = (ushort)((AttributeLow & 0xFF00) | attributeLow);
+            AttributeHigh = (ushort)((AttributeHigh & 0xFF00) | attributeHigh);
+        }
+    }
+
     public const int NumScanlines = 262;
     public const int NumCycles = 341;
 
@@ -34,6 +89,8 @@ public class PpuV2 : IPpu
     private bool _w;
     private byte _openBus;
     private byte _dataBuffer;
+    private BackgroundRenderData _bg;
+    private BackgroundShifters _bgShifters;
 
     // PPU state
     private long _frame;
@@ -260,36 +317,38 @@ public class PpuV2 : IPpu
 
     public void Step()
     {
-        var debugColor = DebugColors.Blank;
+        var outputColor = DebugColors.Blank;
 
         // This method should closely follow the PPU timing diagram at
         // https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
 
         if (_scanline == 261 || _scanline < 240)
         {
-            if ((_cycle > 0 && _cycle < 261) || (_cycle >= 321 && _cycle < 341))
+            if ((_cycle > 0 && _cycle < 261) || (_cycle >= 321 && _cycle <= 336))
             {
+                // Don't shift for the first pixel
+                if (_cycle >= 1)
+                {
+                    _bgShifters.Shift();
+                }
+
                 switch (_cycle % 8)
                 {
                     case 0:
-                        debugColor = DebugColors.VUpdate;
                         IncrementCoarseXScroll();
+                        _bgShifters.Load(_bg);
                         break;
-                    case <= 2:
-                        debugColor = DebugColors.NameTableFetch;
-                        FetchNameTable();
+                    case 1:
+                        _bg.NextTileId = FetchNameTable();
                         break;
-                    case <= 4:
-                        debugColor = DebugColors.AttributeFetch;
-                        FetchAttribute();
+                    case 3:
+                        _bg.Attribute = FetchAttribute();
                         break;
-                    case <= 6:
-                        debugColor = DebugColors.BackgroundLowFetch;
-                        FetchBackgroundLow();
+                    case 5:
+                        _bg.PatternLow = FetchBackgroundLow();
                         break;
                     case 7:
-                        debugColor = DebugColors.BackgroundHighFetch;
-                        FetchBackgroundHigh();
+                        _bg.PatternHigh = FetchBackgroundHigh();
                         break;
                 }
 
@@ -297,7 +356,6 @@ public class PpuV2 : IPpu
                 {
                     // Increment vertical scroll
                     IncrementVerticalScroll();
-                    debugColor = DebugColors.VUpdate;
                 }
                 else if (_cycle == 257)
                 {
@@ -307,9 +365,14 @@ public class PpuV2 : IPpu
                         _v.CoarseX = _t.CoarseX;
                         _v.NameTableX = _t.NameTableX;
                     }
-
-                    debugColor = DebugColors.VUpdate;
                 }
+            }
+
+            if (_cycle >= 1 && _cycle <= 256)
+            {
+                var backgroundPixel = _bgShifters.GetPixel();
+                var backgroundPalette = _bgShifters.GetPalette();
+                outputColor = GetPaletteColor(backgroundPalette, backgroundPixel);
             }
         }
 
@@ -317,7 +380,6 @@ public class PpuV2 : IPpu
         {
             // Set VBlank flag
             VblankFlag = true;
-            debugColor = DebugColors.Flag;
         }
 
         if (_scanline == 261)
@@ -328,7 +390,6 @@ public class PpuV2 : IPpu
                 VblankFlag = false;
                 SpriteOverflow = false;
                 SpriteZeroHit = false;
-                debugColor = DebugColors.Flag;
             }
 
             if (_cycle >= 280 && _cycle <= 304)
@@ -340,12 +401,10 @@ public class PpuV2 : IPpu
                     _v.FineY = _t.FineY;
                     _v.NameTableY = _t.NameTableY;
                 }
-
-                debugColor = DebugColors.VUpdate;
             }
         }
 
-        Output(debugColor);
+        Output(outputColor);
 
         // Move on to the next cycle/scanline
         _cycle += 1;
@@ -421,20 +480,50 @@ public class PpuV2 : IPpu
         _v.CoarseY += 1;
     }
 
-    private void FetchBackgroundHigh()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte FetchBackgroundLow()
     {
+        return ReadMemory((ushort)(
+            // Start with the base address of the pattern table that is
+            // selected for backgrounds. This is either $0000 or $1000
+            // depending on the PPUCTRL register.
+            BackgroundPatternTableAddress
+            // Multiply by 16 because each tile is 16 bytes.
+            + _bg.NextTileId * 16
+            // Add fine Y scroll to select the correct row of pixels
+            // within the tile.
+            + _v.FineY
+        ));
     }
 
-    private void FetchBackgroundLow()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte FetchBackgroundHigh()
     {
+        return ReadMemory((ushort)(
+            // Same as FetchBackgroundLow (above), but add 8 to get the high
+            // byte of the tile data
+            BackgroundPatternTableAddress + _bg.NextTileId * 16 + _v.FineY + 8
+        ));
     }
 
-    private void FetchNameTable()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte FetchNameTable()
     {
+        return ReadMemory((ushort)(0x2000 | (_v.Value & 0x0FFF)));
     }
 
-    private void FetchAttribute()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte FetchAttribute()
     {
+        var v = _v.Value;
+
+        var address =
+            0x23C0
+            | (v & 0x0C00)
+            | ((v >> 4) & 0x38)
+            | ((v >> 2) & 0x07);
+
+        return ReadMemory((ushort)address);
     }
 
     // https://www.nesdev.org/wiki/PPU_memory_map
@@ -458,6 +547,16 @@ public class PpuV2 : IPpu
                 // $3F00-$3F1F is mirrored across $3F20-$3FFF
                 var paletteAddress = address - 0x3F00;
                 paletteAddress %= 0x20;
+
+                // Hardware mirrors $3F10/$14/$18/$1C to $3F00/$04/$08/$0C
+                // This means that background color 0 is shared across all four
+                // background palettes, and sprite color 0 is shared across all four
+                // sprite palettes.
+                if ((paletteAddress & 0x13) == 0x10)
+                {
+                    paletteAddress -= 0x10;
+                }
+
                 return _paletteRam[paletteAddress];
 
             default:
@@ -494,6 +593,16 @@ public class PpuV2 : IPpu
                 // $3F00-$3F1F is mirrored across $3F20-$3FFF
                 var paletteAddress = address - 0x3F00;
                 paletteAddress %= 0x20;
+
+                // Hardware mirrors $3F10/$14/$18/$1C to $3F00/$04/$08/$0C
+                // This means that background color 0 is shared across all four
+                // background palettes, and sprite color 0 is shared across all four
+                // sprite palettes.
+                if ((paletteAddress & 0x13) == 0x10)
+                {
+                    paletteAddress -= 0x10;
+                }
+
                 _paletteRam[paletteAddress] = value;
                 break;
 
@@ -534,5 +643,22 @@ public class PpuV2 : IPpu
             color.G,
             color.B
         );
+    }
+
+    /// <summary>
+    /// Get a color from the palette RAM, converting the NES palette index to RGB.
+    /// Each palette has 4 colors.
+    /// </summary>
+    private Color GetPaletteColor(int paletteNumber, int colorIndex)
+    {
+        if (colorIndex == 0)
+        {
+            paletteNumber = 0;
+        }
+
+        var paletteOffset = (paletteNumber * 4) + colorIndex;
+        var paletteIndex = _paletteRam[paletteOffset];
+        var color = Palette.Colors[paletteIndex];
+        return color;
     }
 }

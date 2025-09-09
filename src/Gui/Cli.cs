@@ -32,7 +32,13 @@ internal sealed class Cli
         var console = new NesConsole();
         console.InsertCartridge(cartridge);
 
-        var windowOptions = WindowOptions.Default with { Title = romFileName };
+        var windowOptions = WindowOptions.Default with
+        {
+            Title = romFileName,
+            FramesPerSecond = 60,
+            UpdatesPerSecond = 60,
+        };
+
         Func<IWindow, IGameWindow> createWindow = window => new GameWindow(window, console);
 
         var windowHost = new WindowHost(createWindow, windowOptions);
