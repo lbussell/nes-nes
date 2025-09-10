@@ -11,7 +11,7 @@ internal sealed class PatternTableViewer : ClosableWindow
     private readonly PatternTableTexture _texture;
 
     public PatternTableViewer(PatternTableTexture patternTableTexture)
-        : base("Pattern Tables", startOpen: true)
+        : base("Pattern Tables")
     {
         _texture = patternTableTexture;
         _texture.UpdateTextureData();

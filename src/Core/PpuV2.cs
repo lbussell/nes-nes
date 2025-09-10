@@ -6,96 +6,10 @@ using System.Runtime.CompilerServices;
 
 namespace NesNes.Core;
 
+public delegate void RenderPixel(ushort x, ushort y, byte r, byte g, byte b);
+
 public class PpuV2 : IPpu
 {
-    private struct BackgroundRenderData
-    {
-        public byte NextTileId;
-        public byte Attribute;
-        public byte PatternLow;
-        public byte PatternHigh;
-    }
-
-    private struct SpriteRenderData
-    {
-        public byte X;
-        public byte Palette;
-        public byte PatternHigh;
-        public byte PatternLow;
-        public bool FlippedHorizontally;
-        public bool Priority;
-
-        public void Shift()
-        {
-            if (X > 0)
-            {
-                X -= 1;
-            }
-            else if (FlippedHorizontally)
-            {
-                PatternHigh >>= 1;
-                PatternLow >>= 1;
-            }
-            else
-            {
-                PatternHigh <<= 1;
-                PatternLow <<= 1;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Background shifters used for rendering background pixels. Pixels are
-    /// shifted out of the high bit first, and new data is loaded into the low
-    /// bits.
-    /// </summary>
-    private struct BackgroundShifters
-    {
-        public ushort PatternLow;
-        public ushort PatternHigh;
-        public ushort AttributeLow;
-        public ushort AttributeHigh;
-
-        public readonly byte GetPixel(byte fineX)
-        {
-            // Fine X scroll selects which bit of the 16-bit shift register is output. The bit
-            // normally output is bit 15 (mask 0x8000). We shift each cycle, but instead of
-            // performing fine X worth of dummy shifts we tap the appropriate bit using (0x8000 >>
-            // fineX).
-            var mask = (ushort)(0x8000 >> fineX);
-            var bit0 = (PatternLow & mask) > 0 ? 1 : 0;
-            var bit1 = (PatternHigh & mask) > 0 ? 1 : 0;
-            return (byte)(bit0 | (bit1 << 1));
-        }
-
-        public readonly byte GetPalette(byte fineX)
-        {
-            var mask = (ushort)(0x8000 >> fineX);
-            var bit0 = (AttributeLow & mask) > 0 ? 1 : 0;
-            var bit1 = (AttributeHigh & mask) > 0 ? 1 : 0;
-            return (byte)(bit0 | (bit1 << 1));
-        }
-
-        public void Shift()
-        {
-            PatternLow <<= 1;
-            PatternHigh <<= 1;
-            AttributeLow <<= 1;
-            AttributeHigh <<= 1;
-        }
-
-        public void Load(BackgroundRenderData data)
-        {
-            PatternLow = (ushort)((PatternLow & 0xFF00) | data.PatternLow);
-            PatternHigh = (ushort)((PatternHigh & 0xFF00) | data.PatternHigh);
-
-            var attributeLow = (data.Attribute & 0b01) > 0 ? 0xFF : 0x00;
-            var attributeHigh = (data.Attribute & 0b10) > 0 ? 0xFF : 0x00;
-            AttributeLow = (ushort)((AttributeLow & 0xFF00) | attributeLow);
-            AttributeHigh = (ushort)((AttributeHigh & 0xFF00) | attributeHigh);
-        }
-    }
-
     public const int NumScanlines = 262;
     public const int NumCycles = 341;
 
@@ -934,5 +848,93 @@ public class PpuV2 : IPpu
         var paletteIndex = _paletteRam[paletteOffset];
         var color = Palette.Colors[paletteIndex];
         return color;
+    }
+
+    private struct BackgroundRenderData
+    {
+        public byte NextTileId;
+        public byte Attribute;
+        public byte PatternLow;
+        public byte PatternHigh;
+    }
+
+    private struct SpriteRenderData
+    {
+        public byte X;
+        public byte Palette;
+        public byte PatternHigh;
+        public byte PatternLow;
+        public bool FlippedHorizontally;
+        public bool Priority;
+
+        public void Shift()
+        {
+            if (X > 0)
+            {
+                X -= 1;
+            }
+            else if (FlippedHorizontally)
+            {
+                PatternHigh >>= 1;
+                PatternLow >>= 1;
+            }
+            else
+            {
+                PatternHigh <<= 1;
+                PatternLow <<= 1;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Background shifters used for rendering background pixels. Pixels are
+    /// shifted out of the high bit first, and new data is loaded into the low
+    /// bits.
+    /// </summary>
+    private struct BackgroundShifters
+    {
+        public ushort PatternLow;
+        public ushort PatternHigh;
+        public ushort AttributeLow;
+        public ushort AttributeHigh;
+
+        public readonly byte GetPixel(byte fineX)
+        {
+            // Fine X scroll selects which bit of the 16-bit shift register is output. The bit
+            // normally output is bit 15 (mask 0x8000). We shift each cycle, but instead of
+            // performing fine X worth of dummy shifts we tap the appropriate bit using (0x8000 >>
+            // fineX).
+            var mask = (ushort)(0x8000 >> fineX);
+            var bit0 = (PatternLow & mask) > 0 ? 1 : 0;
+            var bit1 = (PatternHigh & mask) > 0 ? 1 : 0;
+            return (byte)(bit0 | (bit1 << 1));
+        }
+
+        public readonly byte GetPalette(byte fineX)
+        {
+            var mask = (ushort)(0x8000 >> fineX);
+            var bit0 = (AttributeLow & mask) > 0 ? 1 : 0;
+            var bit1 = (AttributeHigh & mask) > 0 ? 1 : 0;
+            return (byte)(bit0 | (bit1 << 1));
+        }
+
+        public void Shift()
+        {
+            PatternLow <<= 1;
+            PatternHigh <<= 1;
+            AttributeLow <<= 1;
+            AttributeHigh <<= 1;
+        }
+
+        public void Load(BackgroundRenderData data)
+        {
+            PatternLow = (ushort)((PatternLow & 0xFF00) | data.PatternLow);
+            PatternHigh = (ushort)((PatternHigh & 0xFF00) | data.PatternHigh);
+
+            var attributeLow = (data.Attribute & 0b01) > 0 ? 0xFF : 0x00;
+            var attributeHigh = (data.Attribute & 0b10) > 0 ? 0xFF : 0x00;
+            AttributeLow = (ushort)((AttributeLow & 0xFF00) | attributeLow);
+            AttributeHigh = (ushort)((AttributeHigh & 0xFF00) | attributeHigh);
+        }
     }
 }

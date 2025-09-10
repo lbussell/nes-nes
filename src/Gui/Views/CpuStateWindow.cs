@@ -8,7 +8,7 @@ using NesNes.Gui.Rendering;
 namespace NesNes.Gui.Views;
 
 internal class CpuStateWindow(NesConsole console)
-    : ClosableWindow("CPU State", ImGuiWindowFlags.AlwaysAutoResize, startOpen: true)
+    : ClosableWindow("CPU State", ImGuiWindowFlags.AlwaysAutoResize)
 {
     private const string ByteFormat = "X2";
     private const string UshortFormat = "X4";

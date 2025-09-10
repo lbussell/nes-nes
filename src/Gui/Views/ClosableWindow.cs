@@ -7,12 +7,17 @@ namespace NesNes.Gui.Views;
 
 internal abstract class ClosableWindow(
     string name,
-    ImGuiWindowFlags flags = ImGuiWindowFlags.None,
-    bool startOpen = false
+    ImGuiWindowFlags flags = ImGuiWindowFlags.None
 ) : IClosableWindow
 {
     private readonly ImGuiWindowFlags _flags = flags;
-    private bool _isOpen = startOpen;
+    private bool _isOpen = false;
+
+    public bool IsOpen
+    {
+        get => _isOpen;
+        set => _isOpen = value;
+    }
 
     public string Name { get; } = name;
 

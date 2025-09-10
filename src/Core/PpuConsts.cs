@@ -25,10 +25,8 @@ public static class PpuConsts
 
     public const int PatternTableTilesHeight = 16;
     public const int PatternTableTilesWidth = 16;
-    public const int PatternTableTilesCount = PatternTableTilesHeight * PatternTableTilesWidth;
     public const int PatternTablePixelWidth = PatternTableTilesWidth * PatternSize;
     public const int PatternTablePixelHeight = PatternTableTilesHeight * PatternSize;
-    public const int PatternTableSizeBytes = PatternTableTilesWidth * PatternTableTilesHeight * BytesPerTile;
 
     /// <summary>
     /// Size of a single pattern in the pattern table, in pixels. Patterns are
@@ -55,19 +53,7 @@ public static class PpuConsts
     /// </summary>
     public const int DisplayWidth = 256;
 
-    /// <summary>
-    /// When the PPU enters this scanline, it triggers an NMI (non-masking
-    /// interrupt)
-    /// </summary>
-    public const int VblankScanline = 241;
-
-    // https://www.nesdev.org/wiki/PPU_memory_map
-    public const int PatternTablesEnd = 0x2000;
-    public const int NameTablesStart = 0x2000;
-    public const int NameTablesEnd = 0x3000;
     public const int NameTableSize = 0x400;
-    public const int PaletteRamStart = 0x3F00;
-    public const int PaletteRamEnd = 0x4000;
 
     public const int ChrRomSize = 0x2000; // 8KB
 }

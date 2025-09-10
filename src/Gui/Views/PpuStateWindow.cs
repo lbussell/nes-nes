@@ -8,7 +8,7 @@ using NesNes.Core;
 namespace NesNes.Gui.Views;
 
 internal class PpuStateWindow(NesConsole console)
-    : ClosableWindow("PPU State", ImGuiWindowFlags.AlwaysAutoResize, startOpen: true)
+    : ClosableWindow("PPU State", ImGuiWindowFlags.AlwaysAutoResize)
 {
     private readonly NesConsole _console = console;
     private readonly IPpu _ppu = console.Ppu;

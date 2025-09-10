@@ -29,7 +29,7 @@ internal sealed class NameTableViewer : ClosableWindow
     private bool _showViewport;
 
     public NameTableViewer(GL gl, NesConsole console, PatternTableTexture patternTable)
-        : base("Name Tables", startOpen: true)
+        : base("Name Tables")
     {
         _console = console;
         _patternTable = patternTable;
