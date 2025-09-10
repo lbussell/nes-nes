@@ -21,6 +21,7 @@ public class CartridgeData
 
     // The current offset of PrgRom in the rom data.
     private int _prgRomOffset;
+    private int _prgRomLength;
 
     // The current offset of PrgRom in the rom data.
     private int _chrRomOffset;
@@ -44,7 +45,7 @@ public class CartridgeData
     /// <summary>
     /// PRG ROM contains program code.
     /// </summary>
-    public ReadOnlySpan<byte> PrgRom => _rom.AsSpan(_prgRomOffset, PrgRomPageSize);
+    public ReadOnlySpan<byte> PrgRom => _rom.AsSpan(_prgRomOffset, _prgRomLength);
 
     /// <summary>
     /// CHR ROM contains graphics data.
@@ -75,6 +76,7 @@ public class CartridgeData
             _prgRomOffset += TrainerSize;
         }
 
-        _chrRomOffset = _prgRomOffset + (Header.PrgPages * PrgRomPageSize);
+        _prgRomLength = Header.PrgPages * PrgRomPageSize;
+        _chrRomOffset = _prgRomOffset + _prgRomLength;
     }
 }

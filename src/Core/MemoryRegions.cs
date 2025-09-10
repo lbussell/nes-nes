@@ -136,7 +136,7 @@ public static class MemoryRegions
 
     public const ushort PrgRom = 0x8000;
     public const ushort PrgRomEnd = 0xFFFF;
-    public const ushort PrgRomSize = PrgRomEnd - PrgRom + 1;
+    public const ushort PrgRomSize = 0x8000;
 
     public const ushort NmiVector = 0xFFFA;
     public const ushort ResetVector = 0xFFFC;

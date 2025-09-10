@@ -3,13 +3,16 @@
 
 using ImGuiNET;
 using System.Numerics;
-using Texture = NesNes.Gui.Rendering.Texture;
 
-namespace NesNes.Gui;
+namespace NesNes.Gui.Rendering;
 
 internal static class ImGuiHelper
 {
-    public static void RenderTextureWithIntegerScaling(Texture texture)
+    public static void RenderTextureWithIntegerScaling(
+        IImGuiRenderable texture,
+        out Vector2 textureTopLeft,
+        out int scale
+    )
     {
         Vector2 availableSize = ImGui.GetContentRegionAvail();
 
@@ -18,7 +21,7 @@ internal static class ImGuiHelper
         int scaleY = Math.Max(1, (int)(availableSize.Y / texture.Size.Y));
 
         // Use the smaller scale factor to maintain aspect ratio
-        int scale = Math.Min(scaleX, scaleY);
+        scale = Math.Min(scaleX, scaleY);
         var scaledDisplaySize = (Vector2)(scale * texture.Size);
 
         // Center the image in the available space
@@ -33,5 +36,36 @@ internal static class ImGuiHelper
 
         ImGui.SetCursorPos(newCursorPosition);
         ImGui.Image(texture.Handle, scaledDisplaySize);
+
+        textureTopLeft = newCursorPosition;
+    }
+
+    /// <summary>
+    /// Render a button.
+    /// </summary>
+    /// <param name="label">
+    /// Text to display on the button.
+    /// </param>
+    /// <param name="onClick">
+    /// If not assigned, the button will still be rendered, but disabled.
+    /// </param>
+    public static void RenderButton(string label, Action? onClick)
+    {
+        var buttonDisabled = onClick is null;
+
+        if (buttonDisabled)
+        {
+            ImGui.BeginDisabled();
+        }
+
+        if (ImGui.Button(label))
+        {
+            onClick?.Invoke();
+        }
+
+        if (buttonDisabled)
+        {
+            ImGui.EndDisabled();
+        }
     }
 }

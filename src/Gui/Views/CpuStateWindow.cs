@@ -3,6 +3,7 @@
 
 using ImGuiNET;
 using NesNes.Core;
+using NesNes.Gui.Rendering;
 
 namespace NesNes.Gui.Views;
 
@@ -11,6 +12,12 @@ internal class CpuStateWindow(NesConsole console)
 {
     private const string ByteFormat = "X2";
     private const string UshortFormat = "X4";
+
+    public Action? OnTogglePause { get; set; } = null;
+    public Action? OnStepInstruction { get; set; } = null;
+    public Action? OnStepScanline { get; set; } = null;
+    public Action? OnStepFrame { get; set; } = null;
+    public Action? OnReset { get; set; } = null;
 
     private static readonly (string, Flags)[][] s_checkboxes =
     [
@@ -33,8 +40,10 @@ internal class CpuStateWindow(NesConsole console)
     private readonly NesConsole _console = console;
     private readonly Cpu _cpu = console.Cpu;
 
-    protected override void RenderContent(double deltaTimeSeconds)
+    protected unsafe override void RenderContent(double deltaTimeSeconds)
     {
+        RenderControls();
+
         ImGui.SeparatorText("CPU");
 
         ImGui.AlignTextToFramePadding();
@@ -65,6 +74,11 @@ internal class CpuStateWindow(NesConsole console)
 
         ImGui.SeparatorText("Flags (P)");
         RenderFlagsCheckboxes(registers.P);
+
+        ImGui.SeparatorText("Instruction");
+        ImGui.AlignTextToFramePadding();
+        var opcode = _console.Cpu.CurrentOpcode;
+        ImGui.InputScalar("Opcode", ImGuiDataType.U8, (nint)(&opcode), 0, 0, "0x%04X", ImGuiInputTextFlags.ReadOnly);
     }
 
     private static void RenderByte(string label, byte value)
@@ -79,6 +93,19 @@ internal class CpuStateWindow(NesConsole console)
         ImGui.Text(label);
         ImGui.SameLine();
         ImGui.Button(value.ToString(UshortFormat));
+    }
+
+    private void RenderControls()
+    {
+        ImGuiHelper.RenderButton("Break", OnTogglePause);
+        ImGui.SameLine();
+        ImGuiHelper.RenderButton("Instr.", OnStepInstruction);
+        ImGui.SameLine();
+        ImGuiHelper.RenderButton("Scanline", OnStepScanline);
+        ImGui.SameLine();
+        ImGuiHelper.RenderButton("Frame", OnStepFrame);
+        ImGui.SameLine();
+        ImGuiHelper.RenderButton("Reset", OnReset);
     }
 
     private static void RenderFlagsCheckboxes(Flags flags)

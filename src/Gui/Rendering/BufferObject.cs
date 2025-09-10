@@ -3,32 +3,27 @@
 
 using Silk.NET.OpenGL;
 
-namespace NesNes.Gui.Rendering;
+namespace Common;
 
-public class BufferObject<T> : IDisposable where T : unmanaged
+public sealed class BufferObject<T> : IDisposable where T : unmanaged
 {
-    private readonly uint _handle;
+    private readonly GL _gl;
     private readonly BufferTargetARB _bufferType;
-    private readonly GL _openGl;
+    private readonly uint _handle;
 
-    public BufferObject(GL openGl, Span<T> data, BufferTargetARB bufferType)
+    public BufferObject(GL gl, BufferTargetARB bufferType, ReadOnlySpan<T> data)
     {
-        // Setting the gl instance and storing our buffer type.
-        _openGl = openGl;
+        _gl = gl;
         _bufferType = bufferType;
 
-        // Getting the handle, and then uploading the data to said handle.
-        _handle = _openGl.GenBuffer();
-
-        Bind();
-        _openGl.BufferData(
-            target: _bufferType,
-            data: data,
-            usage: BufferUsageARB.StaticDraw
-        );
+        _handle = _gl.GenBuffer();
+        _gl.BindBuffer(_bufferType, _handle);
+        _gl.BufferData(_bufferType, data, BufferUsageARB.StaticDraw);
     }
 
-    public void Bind() => _openGl.BindBuffer(_bufferType, _handle);
+    public void Bind() => _gl.BindBuffer(_bufferType, _handle);
 
-    public void Dispose() => _openGl.DeleteBuffer(_handle);
+    public void Unbind() => _gl.BindBuffer(_bufferType, 0);
+
+    public void Dispose() => _gl.DeleteBuffer(_handle);
 }

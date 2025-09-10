@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025 Logan Bussell
 // SPDX-License-Identifier: MIT
 
+using System.ComponentModel;
+
 namespace NesNes.Core;
 
 public delegate void CpuCallback(ushort PC, Registers registers);
@@ -32,6 +34,8 @@ public class Cpu
     }
 
     public int Cycles { get; private set; }
+
+    public byte CurrentOpcode { get; private set; }
 
     public Registers Registers
     {
@@ -111,6 +115,12 @@ public class Cpu
         {
             cyclesElapsed += NonMaskableInterrupt();
         }
+
+        // For debugging purposes, prefetch the next opcode now, but don't
+        // increment the program counter yet. This is so the opcode can be
+        // shown in the debugger without having to manually interact with the
+        // bus, etc.
+        CurrentOpcode = ReadOnly(_registers.PC);
 
         return cyclesElapsed;
     }
@@ -1117,6 +1127,12 @@ public class Cpu
         Tick();
         return value;
     }
+
+    /// <summary>
+    /// Read a byte from memory without incrementing the cycle count. This is
+    /// used for debug views only.
+    /// </summary>
+    private byte ReadOnly(ushort address) => _bus.CpuRead(address);
 
     private ushort Read16(ushort address)
     {

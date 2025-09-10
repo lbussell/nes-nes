@@ -5,7 +5,7 @@ namespace NesNes.Core;
 
 public class Bus : IBus
 {
-    public required Ppu Ppu { get; init; }
+    public required IPpu Ppu { get; init; }
     public CpuRam Ram { get; } = new CpuRam();
     public IMapper? Mapper { get; set; } = null;
 
@@ -26,6 +26,16 @@ public class Bus : IBus
         {
             // IO registers - not implemented yet
             // Controllers, APU, etc.
+            return 0;
+        }
+        else if (address < 0x6000)
+        {
+            // Unmapped?
+            return 0;
+        }
+        else if (address < 0x8000)
+        {
+            // Cartridge RAM
             return 0;
         }
         else if (Mapper is not null && address >= MemoryRegions.PrgRom)
