@@ -16,6 +16,34 @@ public class PpuV2 : IPpu
         public byte PatternHigh;
     }
 
+    private struct SpriteRenderData
+    {
+        public byte X;
+        public byte Palette;
+        public byte PatternHigh;
+        public byte PatternLow;
+        public bool FlippedHorizontally;
+        public bool Priority;
+
+        public void Shift()
+        {
+            if (X > 0)
+            {
+                X -= 1;
+            }
+            else if (FlippedHorizontally)
+            {
+                PatternHigh >>= 1;
+                PatternLow >>= 1;
+            }
+            else
+            {
+                PatternHigh <<= 1;
+                PatternLow <<= 1;
+            }
+        }
+    }
+
     /// <summary>
     /// Background shifters used for rendering background pixels. Pixels are
     /// shifted out of the high bit first, and new data is loaded into the low
@@ -28,17 +56,23 @@ public class PpuV2 : IPpu
         public ushort AttributeLow;
         public ushort AttributeHigh;
 
-        public readonly byte GetPixel()
+        public readonly byte GetPixel(byte fineX)
         {
-            var bit0 = (PatternLow & 0x8000) > 0 ? 1 : 0;
-            var bit1 = (PatternHigh & 0x8000) > 0 ? 1 : 0;
+            // Fine X scroll selects which bit of the 16-bit shift register is output. The bit
+            // normally output is bit 15 (mask 0x8000). We shift each cycle, but instead of
+            // performing fine X worth of dummy shifts we tap the appropriate bit using (0x8000 >>
+            // fineX).
+            var mask = (ushort)(0x8000 >> fineX);
+            var bit0 = (PatternLow & mask) > 0 ? 1 : 0;
+            var bit1 = (PatternHigh & mask) > 0 ? 1 : 0;
             return (byte)(bit0 | (bit1 << 1));
         }
 
-        public readonly byte GetPalette()
+        public readonly byte GetPalette(byte fineX)
         {
-            var bit0 = (AttributeLow & 0x8000) > 0 ? 1 : 0;
-            var bit1 = (AttributeHigh & 0x8000) > 0 ? 1 : 0;
+            var mask = (ushort)(0x8000 >> fineX);
+            var bit0 = (AttributeLow & mask) > 0 ? 1 : 0;
+            var bit1 = (AttributeHigh & mask) > 0 ? 1 : 0;
             return (byte)(bit0 | (bit1 << 1));
         }
 
@@ -91,6 +125,10 @@ public class PpuV2 : IPpu
     private byte _dataBuffer;
     private BackgroundRenderData _bg;
     private BackgroundShifters _bgShifters;
+    private readonly SpriteRenderData[] _sprites = new SpriteRenderData[8];
+    private int _spritesOnScanline;
+    // Indicates whether we are drawing sprite 0 on the current scanline.
+    private bool _spriteZeroHitIsPossible;
 
     // PPU state
     private long _frame;
@@ -317,11 +355,24 @@ public class PpuV2 : IPpu
 
     public void Step()
     {
-        var outputColor = DebugColors.Blank;
-
         // This method should closely follow the PPU timing diagram at
         // https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
 
+        // Do OAM/sprite operations
+        switch (_cycle)
+        {
+            case 1:
+                ClearSecondaryOam();
+                break;
+            case 256:
+                EvaluateSprites();
+                break;
+            case 340:
+                FetchSprites();
+                break;
+        }
+
+        // Do background fetching operations
         if (_scanline == 261 || _scanline < 240)
         {
             if ((_cycle > 0 && _cycle < 261) || (_cycle >= 321 && _cycle <= 336))
@@ -330,6 +381,10 @@ public class PpuV2 : IPpu
                 if (_cycle >= 1)
                 {
                     _bgShifters.Shift();
+                    for (int i = 0; i < _spritesOnScanline; i += 1)
+                    {
+                        _sprites[i].Shift();
+                    }
                 }
 
                 switch (_cycle % 8)
@@ -368,11 +423,53 @@ public class PpuV2 : IPpu
                 }
             }
 
-            if (_cycle >= 1 && _cycle <= 256)
+            // Only draw visible scanlines 0-239 (240 is post-render, 261 is pre-render)
+            if (_scanline < 240 && _cycle >= 0 && _cycle < 256)
             {
-                var backgroundPixel = _bgShifters.GetPixel();
-                var backgroundPalette = _bgShifters.GetPalette();
-                outputColor = GetPaletteColor(backgroundPalette, backgroundPixel);
+                var backgroundPixel = _bgShifters.GetPixel(_fineXScroll);
+                var backgroundPalette = _bgShifters.GetPalette(_fineXScroll);
+
+                // Left 8-pixel masking per PPUMASK bits 1 & 2
+                if (_cycle <= 8)
+                {
+                    if (!ShowBackgroundInLeft8Pixels)
+                    {
+                        backgroundPixel = 0;
+                    }
+                }
+
+                var (spritePixel, spritePalette, spriteBehindBackground, isSpriteZero) = GetSpritePixel();
+
+                var (colorIndex, palette) = (spritePixel, backgroundPixel, spriteBehindBackground) switch
+                {
+                    // No sprite pixel
+                    (0, _, _) => (backgroundPixel, backgroundPalette),
+
+                    // No background pixel
+                    (_, 0, _) => (spritePixel, spritePalette),
+
+                    // If both pixels are present, the sprite pixel is drawn
+                    // over the background only if its priority flag is set
+                    // to false.
+                    ( > 0, > 0, false) => (spritePixel, spritePalette),
+
+                    // Otherwise the background pixel is drawn over sprite
+                    ( > 0, > 0, true) => (backgroundPixel, backgroundPalette),
+                };
+
+                // Sprite 0 hit: occurs if non-zero background & sprite pixel overlap (before x=255)
+                if (
+                    !SpriteZeroHit
+                    && isSpriteZero
+                    && spritePixel > 0
+                    && backgroundPixel > 0
+                    && _cycle < 255
+                )
+                {
+                    SpriteZeroHit = true;
+                }
+
+                Output(GetPaletteColor(palette, colorIndex));
             }
         }
 
@@ -404,8 +501,6 @@ public class PpuV2 : IPpu
             }
         }
 
-        Output(outputColor);
-
         // Move on to the next cycle/scanline
         _cycle += 1;
         if (_cycle >= NumCycles)
@@ -418,6 +513,175 @@ public class PpuV2 : IPpu
                 _scanline = 0;
             }
         }
+    }
+
+    private void FetchSprites()
+    {
+        for (int i = 0; i < _spritesOnScanline; i += 1)
+        {
+            var spriteOffset = i * 4;
+
+            // https://www.nesdev.org/wiki/PPU_OAM
+            // The secondary OAM contains the sprites that will be drawn on the
+            // next scanline. Each sprite is represented by 4 bytes.
+            var spriteY = _secondaryOam[spriteOffset];
+            var tileIndexNumber = _secondaryOam[spriteOffset + 1];
+            var attribute = _secondaryOam[spriteOffset + 2];
+            var spriteX = _secondaryOam[spriteOffset + 3];
+
+            // We don't need to remember if the sprite is flipped vertically
+            // later, we can account for this now when we read the sprite's
+            // pattern data.
+            var isFlippedVertically = (attribute & 0b_1000_0000) > 0;
+
+            // For 8x8 sprites, the pattern table address is determined by the
+            // PPU control register (that's what we're reading here, behind the
+            // getter)
+            var patternTableTileAddress = SpritePatternTableAddress
+                + (tileIndexNumber * PpuConsts.BytesPerTile);
+
+            // Finally, determine which row of the sprite we need to get.
+            var rowOffset = _scanline - spriteY;
+
+            if (isFlippedVertically)
+            {
+                rowOffset = 7 - rowOffset;
+            }
+
+            var patternLowAddress = (ushort)(patternTableTileAddress + rowOffset);
+            var patternHighAddress = (ushort)(patternLowAddress + 8);
+
+            _sprites[i] = new SpriteRenderData
+            {
+                X = spriteX,
+                Palette = (byte)(attribute & 0x03),
+                PatternHigh = Mapper!.PpuRead(patternHighAddress),
+                PatternLow = Mapper!.PpuRead(patternLowAddress),
+                FlippedHorizontally = (attribute & 0b_0100_0000) > 0,
+                Priority = (attribute & 0b_0010_0000) > 0,
+            };
+        }
+    }
+
+    private void EvaluateSprites()
+    {
+        // This is all really just a big hack. We're going to do all sprite
+        // evaluation in one cycle, which is not how the PPU actually works.
+        // Sprite evaluation should actually take place over cycles 65-256, but
+        // this over-simplified approach will work just to get pictures on the
+        // screen. Some games won't work correctly with this approach.
+
+        _spritesOnScanline = 0;
+
+        var nextScanline = _scanline + 1; // Evaluate for the next scanline per NES timing
+
+        _spriteZeroHitIsPossible = false;
+        for (int spriteIndex = 0; spriteIndex < 64; spriteIndex += 1)
+        {
+            // TODO - Support 8x16 sprites.
+            const int SpriteHeight = 8;
+
+            // Check if the sprite will be visible on the next scanline.
+            var spriteY = _oam[spriteIndex * 4];
+            // var isInRange = spriteY <= _scanline && spriteY + SpriteHeight > _scanline;
+            var isInRange = spriteY < nextScanline && nextScanline <= spriteY + SpriteHeight;
+
+            if (isInRange)
+            {
+                if (_spritesOnScanline >= 8)
+                {
+                    SpriteOverflow = true;
+                    return;
+                }
+
+                var _secondaryOamIndex = _spritesOnScanline * 4;
+
+                // Copy the sprite's data to secondary OAM, which contains
+                // all sprites that will be drawn on the next scanline.
+                _oam.AsSpan(spriteIndex * 4, 4).CopyTo(_secondaryOam.AsSpan(_secondaryOamIndex, 4));
+                _spritesOnScanline += 1;
+
+                if (spriteIndex == 0)
+                {
+                    _spriteZeroHitIsPossible = true;
+                }
+            }
+        }
+    }
+
+    private (byte colorIndex, byte palette, bool isBehindBackground, bool isSpriteZero) GetSpritePixel()
+    {
+        byte spritePixel = 0;
+        byte spritePalette = 0;
+        bool isBehindBackground = false;
+        bool isSpriteZero = false;
+
+        if (!SpritesEnabled)
+        {
+            return (spritePixel, spritePalette, isBehindBackground, isSpriteZero);
+        }
+
+        for (int i = 0; i < _spritesOnScanline; i += 1)
+        {
+            var sprite = _sprites[i];
+
+            if (sprite.X != 0)
+            {
+                continue;
+            }
+
+            // We have already started shifting the sprite's pattern data, so
+            // we know it's visible. If we have already drawn a sprite pixel,
+            // we shouldn't overwrite it. That's because sprites with a lower
+            // index have priority over those with higher indices.
+
+            // Get the sprite pixel - since these are shift registers we get
+            // only the high bit or the low bit. This depends on which way the
+            // sprite is flipped because I chose to shift the registers in the
+            // opposite direction when the sprite is flipped horizontally (as
+            // opposed to reversing the bits in the sprite data).
+            byte compareTo = sprite.FlippedHorizontally ? (byte)0x01 : (byte)0x80;
+            byte spritePatternLow = (byte)((sprite.PatternLow & compareTo) > 0 ? 1 : 0);
+            byte spritePatternHigh = (byte)((sprite.PatternHigh & compareTo) > 0 ? 1 : 0);
+            spritePixel = (byte)((spritePatternHigh << 1) | spritePatternLow);
+
+            // Sprite palettes have a range of 4-7, so we need to add 4 to get the correct range.
+            spritePalette = (byte)(sprite.Palette + 4);
+
+            isBehindBackground = sprite.Priority;
+
+            if (spritePixel > 0)
+            {
+                if (_spriteZeroHitIsPossible && i == 0)
+                {
+                    // This is sprite 0 (from the OAM table), and we are about to draw a non-zero
+                    // pixel value from it. If there is also a non-transparent background pixel at
+                    // this location, we will need to set the sprite 0 hit flag. We can't do that
+                    // here because we don't know what the background pixel is yet, but we do know
+                    // that it is possible for a sprite 0 hit to occur on this scanline.
+
+                    // We know this is sprite 0 because sprites are always evaluated in the order
+                    // they appear in OAM.
+
+                    // If _spriteZeroHitIsPossible is false, that means the sprite at index 0 here
+                    // is not sprite 0 from OAM - the real sprite 0 is being rendered on this
+                    // scanline.
+
+                    isSpriteZero = true;
+                }
+
+                // The first sprite pixel we find is the one to draw, so there is no need to check
+                // the rest of the sprites.
+                break;
+            }
+        }
+
+        return (spritePixel, spritePalette, isBehindBackground, isSpriteZero);
+    }
+
+    private void ClearSecondaryOam()
+    {
+        Array.Fill<byte>(_secondaryOam, 0xFF);
     }
 
     private void IncrementCoarseXScroll()
@@ -516,14 +780,24 @@ public class PpuV2 : IPpu
     private byte FetchAttribute()
     {
         var v = _v.Value;
-
+        // Attribute table base address for the current nametable
         var address =
             0x23C0
             | (v & 0x0C00)
             | ((v >> 4) & 0x38)
             | ((v >> 2) & 0x07);
 
-        return ReadMemory((ushort)address);
+        var attributeByte = ReadMemory((ushort)address);
+
+        // Each attribute byte encodes palette for a 32x32 pixel (4x4 tile) area in 4 quadrants:
+        // bits 0-1: top-left, bits 2-3: top-right, bits 4-5: bottom-left, bits 6-7: bottom-right.
+        // Determine which quadrant the current tile is in using coarse X/Y.
+        var coarseX = _v.CoarseX;
+        var coarseY = _v.CoarseY;
+
+        var shift = ((coarseY & 0x02) << 1) | (coarseX & 0x02); // yields 0,2,4,6
+        var paletteBits = (byte)((attributeByte >> shift) & 0x03);
+        return paletteBits;
     }
 
     // https://www.nesdev.org/wiki/PPU_memory_map

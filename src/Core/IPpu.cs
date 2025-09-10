@@ -18,6 +18,7 @@ public interface IPpu : ICpuReadable, ICpuWritable
     RenderPixel? OnRenderPixel { get; set; }
 
     Span<byte> PaletteRam { get; }
+    Span<byte> Oam { get; }
 
     void WriteOam(byte address, byte value);
 

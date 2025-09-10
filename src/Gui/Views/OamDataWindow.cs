@@ -22,8 +22,7 @@ internal class OamDataWindow(NesConsole console) : ClosableWindow("Object Attrib
 
     protected override void RenderContent(double deltaTimeSeconds)
     {
-        // var oam = _console.Ppu.Oam;
-        var oam = new Span<byte>();
+        var oam = _console.Ppu.Oam;
 
         if (ImGui.BeginTable("OAM Data", 9, TableFlags))
         {

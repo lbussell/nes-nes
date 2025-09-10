@@ -28,7 +28,7 @@ internal sealed class GameWindow : IGameWindow
         var imGuiIO = ImGui.GetIO();
         imGuiIO.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
-        _internalSize = new Vector2D<int>(PpuV2.NumCycles, PpuV2.NumScanlines);
+        _internalSize = new Vector2D<int>(256, 240);
         _renderTexture = new Texture(_gl, _internalSize);
 
         _console.Ppu.OnRenderPixel = (x, y, r, g, b) => _renderTexture.SetPixel(x, y, r, g, b);
