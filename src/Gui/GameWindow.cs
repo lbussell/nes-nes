@@ -35,6 +35,9 @@ internal sealed class GameWindow : IGameWindow
 
         var patternTableTexture = new PatternTableTexture(_gl, _console);
 
+        var controllerManager = new ControllerManager(_input);
+        _console.GetControllerInput = controllerManager.Scan;
+
         _imGuiWindows =
         [
             // debuggerControls,
@@ -52,6 +55,7 @@ internal sealed class GameWindow : IGameWindow
             new NameTableViewer(_gl, _console, patternTableTexture),
             new OamDataWindow(_console),
             new ImGuiMetrics(),
+            new ControllerView(controllerManager),
         ];
     }
 

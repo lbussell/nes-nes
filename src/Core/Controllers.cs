@@ -22,8 +22,6 @@ public class Controllers
     /// </remarks>
     public ReadControllers ReadControllers { get; set; } = () => (0, 0);
 
-    public MemoryRange MemoryRange => new(0x4016, 0x4017);
-
     public bool ListenRead(ushort address, out byte value)
     {
         // Open bus behavior: reading from the controller registers only

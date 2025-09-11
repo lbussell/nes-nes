@@ -13,7 +13,6 @@ public class NesConsole
     private readonly Cpu _cpu;
     private readonly IPpu _ppu;
     private readonly Bus _bus;
-    private readonly Controllers _controllers = new();
 
     private CartridgeData? _cartridge = null;
 
@@ -37,8 +36,7 @@ public class NesConsole
     /// </summary>
     public NesConsole(
         RenderPixel? renderPixelCallback = null,
-        CpuCallback? logCpuState = null,
-        ReadControllers? readControllers = null
+        CpuCallback? logCpuState = null
     )
     {
         _ppu = new PpuV2();
@@ -63,11 +61,6 @@ public class NesConsole
 
         // This function is called whenever the PPU wants to render a pixel.
         _ppu.OnRenderPixel = renderPixelCallback;
-
-        if (readControllers is not null)
-        {
-            _controllers.ReadControllers = readControllers;
-        }
     }
 
     public int CpuCycles => _cpu.Cycles;
@@ -75,6 +68,8 @@ public class NesConsole
     public CartridgeData? Cartridge => _cartridge;
 
     public bool HasCartridge => _cartridge is not null;
+
+    public Func<byte> GetControllerInput { set => _bus.GetControllerInput = value; }
 
     public void InsertCartridge(CartridgeData cartridge)
     {

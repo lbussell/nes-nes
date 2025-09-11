@@ -10,6 +10,10 @@ public class Bus : IBus
     public IMapper? Mapper { get; set; } = null;
 
     public Action TickCpu { get; set; } = () => { };
+    public Func<byte> GetControllerInput { get; set; } = () => 0;
+
+    private byte _controllerShifter;
+    private bool _controllerStrobe;
 
     /// <inheritdoc/>
     public byte CpuRead(ushort address)
@@ -21,6 +25,18 @@ public class Bus : IBus
         else if (Ppu is not null && address < 0x4000)
         {
             return Ppu.CpuRead(address);
+        }
+        else if (address == 0x4016)
+        {
+            if (_controllerStrobe)
+            {
+                // While strobing, always reflect current state (do not shift)
+                _controllerShifter = GetControllerInput();
+            }
+
+            byte data = (byte)(_controllerShifter & 0x01);
+            _controllerShifter >>= 1;
+            return data;
         }
         else if (address < 0x4020)
         {
@@ -59,6 +75,24 @@ public class Bus : IBus
         else if (Ppu is not null && address < 0x4000)
         {
             Ppu.CpuWrite(address, value);
+        }
+        else if (address == 0x4016)
+        {
+            value &= 0x01;
+            bool strobeHigh = value == 1;
+            if (strobeHigh)
+            {
+                _controllerStrobe = true; // While high, continually read current state
+            }
+            else
+            {
+                if (_controllerStrobe)
+                {
+                    // Transition 1 -> 0 latches snapshot for shifting
+                    _controllerShifter = GetControllerInput();
+                }
+                _controllerStrobe = false;
+            }
         }
         else if (address == MemoryRegions.OamDma)
         {
