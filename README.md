@@ -2,9 +2,16 @@
 
 This is a work-in-progress NES emulator written in .NET.
 
-## Demo
+<img width="1538" height="1079" alt="image" src="https://github.com/user-attachments/assets/4eb00a8c-06df-4e00-9d44-0b1664fcae41" />
+    
+> (above) _Full diagnostic mode_
 
-https://github.com/user-attachments/assets/010d575f-9bbc-4de4-b5e7-5ea6ed7afef3
+## Screenshots
+
+<img width="545" height="527" alt="image" src="https://github.com/user-attachments/assets/c32c684c-8ed1-4ae6-8db6-1579b93cccaf" />
+<img width="533" height="523" alt="image" src="https://github.com/user-attachments/assets/017db7da-8408-473e-81ac-59fdfc73f217" />
+<img width="533" height="523" alt="image" src="https://github.com/user-attachments/assets/d266c58a-de36-41bb-a331-b138bdc85a86" />
+
 
 ## Tech
 
@@ -27,7 +34,7 @@ To build and run the emulator:
 
 ```
 pushd ./src/Gui/
-dotnet run
+dotnet run -- --rom /path/to/your/rom.nes
 ```
 
 ### Publish (Native AOT)
@@ -42,9 +49,9 @@ The final executable will be located in the directory `src/Gui/bin/Release/net10
 
 ## What's missing
 
-- [ ] Input of any kind
-- [ ] Background scrolling
-- [ ] Sprite 0 collision
+- [x] Input of any kind
+- [x] Background scrolling
+- [x] Sprite 0 collision
 - [ ] Cartridge mappers other than NROM
 - [ ] 8x16 sprite mode support
 - [ ] Audio
